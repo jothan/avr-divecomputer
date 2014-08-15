@@ -1,0 +1,37 @@
+#!/bin/bash
+set -e
+
+LUFA_FILE=LUFA-140302.zip
+LUFA_URL="http://www.github.com/abcminiuser/lufa/archive/$LUFA_FILE"
+
+FATFS_FILE=ff10b.zip
+FATFS_URL="http://elm-chan.org/fsw/ff/$FATFS_FILE"
+
+cd $(dirname "$0")
+
+mkdir -p dld lib
+
+cd dld
+if [ ! -e "$FATFS_FILE" ]; then
+    wget "$FATFS_URL"
+fi
+
+if [ ! -e "$LUFA_FILE" ]; then
+    wget "$LUFA_URL"
+fi
+
+cd ..
+
+cd lib
+rm -rf -- lufa lufa-*
+unzip -q "../dld/$LUFA_FILE"
+ln -s -- lufa-* lufa
+
+rm -rf fatfs
+mkdir fatfs
+cd fatfs
+unzip -q "../../dld/$FATFS_FILE"
+rm -- src/diskio.* src/ffconf.h
+cp "../../dist/integer.h" src
+
+echo Success
