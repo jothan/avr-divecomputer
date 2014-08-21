@@ -57,7 +57,7 @@
 / Locale and Namespace Configurations
 /---------------------------------------------------------------------------*/
 
-#define _CODE_PAGE	932
+#define _CODE_PAGE	437
 /* The _CODE_PAGE specifies the OEM code page to be used on the target system.
 /  Incorrect setting of the code page can cause a file open failure.
 /
@@ -89,7 +89,7 @@
 /   1    - ASCII (Valid for only non-LFN configuration) */
 
 
-#define	_USE_LFN	0		/* 0 to 3 */
+#define	_USE_LFN	2		/* 0 to 3 */
 #define	_MAX_LFN	255		/* Maximum LFN length to handle (12 to 255) */
 /* The _USE_LFN option switches the LFN feature.
 /
@@ -138,7 +138,7 @@
 
 
 #define _STR_VOLUME_ID	0	/* 0:Use only 0-9 for drive ID, 1:Use strings for drive ID */
-#define _VOLUME_STRS	"RAM","NAND","CF","SD1","SD2","USB1","USB2","USB3"
+#define _VOLUME_STRS	"SDCARD"
 /* When _STR_VOLUME_ID is set to 1, also pre-defined strings can be used as drive
 /  number in the path name. _VOLUME_STRS defines the drive ID strings for each logical
 /  drives. Number of items must be equal to _VOLUMES. Valid characters for the drive ID
@@ -161,7 +161,7 @@
 /  GET_SECTOR_SIZE command must be implemented to the disk_ioctl() function. */
 
 
-#define	_USE_ERASE	0	/* 0:Disable or 1:Enable */
+#define	_USE_ERASE	1	/* 0:Disable or 1:Enable */
 /* To enable sector erase feature, set _USE_ERASE to 1. Also CTRL_ERASE_SECTOR command
 /  should be added to the disk_ioctl() function. */
 
@@ -201,7 +201,7 @@
 */
 
 
-#define _WORD_ACCESS	0	/* 0 or 1 */
+#define _WORD_ACCESS	1	/* 0 or 1 */
 /* The _WORD_ACCESS option is an only platform dependent option. It defines
 /  which access method is used to the word data on the FAT volume.
 /
