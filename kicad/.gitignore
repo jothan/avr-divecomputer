@@ -1,2 +1,11 @@
 *-cache.lib
 *.bak
+*.ps
+*.pdf
+*.pho
+.~lock*
+*.drl
+*.pos
+*.net
+*.*-bak
+_autosave-*
