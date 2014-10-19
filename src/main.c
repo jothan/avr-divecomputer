@@ -3,6 +3,9 @@
 #include "VirtualSerial.h"
 
 #include "spi.h"
+#include "sdcard.h"
+
+const spi_device_t* const spi_devices[] = {&sdcard_device};
 
 void main(void)
 {
@@ -11,9 +14,11 @@ void main(void)
 	power_all_disable();
 
 	USB_Init();
-	spi_init();
+	spi_init(sizeof(spi_devices));
 
 	CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
+	spi_enable();
+	spi_select(&sdcard_device);
 
 	sei();
 

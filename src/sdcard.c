@@ -5,6 +5,9 @@
 #include "types.h"
 #include "pins.h"
 
+#define SPEED_INITIAL 400000
+#define SPEED_MAX F_CPU
+
 static i8 _spi_init(void)
 {
 	PIN_SET(SDCARD_CS);
@@ -14,6 +17,7 @@ static i8 _spi_init(void)
 
 static i8 _spi_setup(void)
 {
+	spi_set_speed(SPEED_INITIAL);
 	return 0;
 }
 

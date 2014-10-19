@@ -1,8 +1,8 @@
 MCU          = at90usb1286
 ARCH         = AVR8
 BOARD        = USER
-F_CPU        = 16000000
-F_USB        = $(F_CPU)
+F_CPU        = 8000000
+F_USB        = 16000000
 OPTIMIZATION = s
 TARGET       = divecomp
 FATFS_PATH   = ../lib/fatfs
@@ -10,9 +10,8 @@ FATFS_SRC    = $(wildcard $(FATFS_PATH)/src/*.c)
 USB_SRC      = $(wildcard usb/*.c)
 
 SRC          = $(FATFS_SRC) $(USB_SRC) $(LUFA_SRC_USB) $(LUFA_SRC_USBCLASS) $(LUFA_SRC_PLATFORM) $(wildcard *.c)
-#SRC          = $(FATFS_SRC) $(wildcard *.c)
 LUFA_PATH    = ../lib/lufa/LUFA
-CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -I$(FATFS_PATH)/src -Wall -fstrict-aliasing -finline-small-functions -ffreestanding -ffunction-sections -fdata-sections -Iusb
+CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -I$(FATFS_PATH)/src -Wall -ffreestanding -ffunction-sections -fdata-sections -Iusb
 LD_FLAGS     = -Wl,-gc-sections
 
 # Default target

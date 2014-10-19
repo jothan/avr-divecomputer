@@ -24,7 +24,15 @@ static inline u8 spi_shift(u8 output)
 	return SPDR;
 }
 
-void spi_init(void);
+void spi_init(u8 nb);
+void spi_enable(void);
 void spi_disable(void);
+void spi_select(const spi_device_t *device);
+void spi_unselect(void);
+void spi_set_speed(u32 hz);
+void spi_set_div(u8 div);
+
+
+extern const spi_device_t* const spi_devices[];
 
 #endif
