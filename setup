@@ -4,7 +4,11 @@ set -e
 FATFS_FILE=ff10b.zip
 FATFS_URL="http://elm-chan.org/fsw/ff/$FATFS_FILE"
 
-cd $(dirname "$0")
+SYSTEM_FILE=stm32-system.tar.bz2
+SYSTEM_URL="https://dl.dropboxusercontent.com/u/56487493/$SYSTEM_FILE"
+
+BASE_DIR=$(readlink -f `dirname "$0"`)
+cd "$BASE_DIR"
 
 mkdir -p dld lib
 
@@ -13,9 +17,11 @@ if [ ! -e "$FATFS_FILE" ]; then
     wget "$FATFS_URL"
 fi
 
-cd ..
+if [ ! -e "$SYSTEM_FILE" ]; then
+    wget "$SYSTEM_URL"
+fi
 
-cd lib
+cd ../lib
 
 rm -rf fatfs
 mkdir fatfs
@@ -23,5 +29,11 @@ cd fatfs
 unzip -q "../../dld/$FATFS_FILE"
 rm -- src/diskio.* src/ffconf.h
 cp "../../dist/integer.h" src
+
+cd "$BASE_DIR"
+
+rm -rf system
+pwd
+tar xjf "dld/$SYSTEM_FILE"
 
 echo Success
