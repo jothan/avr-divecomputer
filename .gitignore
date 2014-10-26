@@ -1,2 +1,6 @@
-./dld
-./lib
+/Debug
+/Release
+/dld
+/lib
+/system
+/toolchain
