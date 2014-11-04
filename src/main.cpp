@@ -6,19 +6,15 @@
 // ----------------------------------------------------------------------------
 
 #include <stdio.h>
-#include "diag/Trace.h"
+#include <string.h>
+#include <diag/Trace.h>
+#include <cortexm/ExceptionHandlers.h>
 
-#include "Timer.h"
-#include "BlinkLed.h"
+#include <stm32f4xx_hal.h>
+#include <stm32f4xx_hal_rcc.h>
 
-namespace
-{
-  // ----- Timing definitions -------------------------------------------------
-
-  // Keep the LED on for 2/3 of a second.
-  constexpr Timer::ticks_t BLINK_ON_TICKS = Timer::FREQUENCY_HZ *2/3;
-  constexpr Timer::ticks_t BLINK_OFF_TICKS = Timer::FREQUENCY_HZ - BLINK_ON_TICKS;
-}
+#include "depth.h"
+#include "types.h"
 
 static void rtc_init(void)
 {
@@ -40,23 +36,48 @@ static void rtc_init(void)
 
 int main(void)
 {
-  trace_printf("System clock: %uHz\n", SystemCoreClock);
-  rtc_init();
-  trace_printf("RTC ready to go.\n");
+#ifdef DEBUG
+	HAL_EnableDBGSleepMode();
+#endif
 
-  Timer timer;
-  timer.start();
+	__GPIOB_CLK_ENABLE();
+	__GPIOC_CLK_ENABLE();
+	SysTick_Config(SystemCoreClock / 1000);
 
-  BlinkLed blinkLed;
 
-  blinkLed.powerUp();
+	DepthSensor depth;
+	DepthSampling sampling =  DepthSampling::OSR_4096;
 
-  for(;;) {
-      blinkLed.turnOn();
-      timer.sleep(BLINK_ON_TICKS);
+	trace_printf("System clock: %uHz\n", SystemCoreClock);
+	rtc_init();
+	trace_printf("RTC ready to go.\n");
+	depth.enable();
+	trace_printf("Depth sensor ready to go.\n");
 
-      blinkLed.turnOff();
-      timer.sleep(BLINK_OFF_TICKS);
+	for(;;) {
+		u32 pressure = depth.sample_pressure(sampling);
+		u32 temperature = depth.sample_temperature(sampling);
+		i32 comp_pressure;
+		i32 comp_temperature;
 
-    }
+		depth.convert_values(pressure, temperature, comp_pressure, comp_temperature);
+
+		HAL_Delay(1000);
+	}
+
+}
+
+
+extern "C" void
+SysTick_Handler(void)
+{
+	HAL_IncTick();
+}
+
+void HAL_Delay(__IO uint32_t Delay)
+{
+	uint32_t tickstart = 0;
+	tickstart = HAL_GetTick();
+	while((HAL_GetTick() - tickstart) < Delay)
+		__WFI();
 }
