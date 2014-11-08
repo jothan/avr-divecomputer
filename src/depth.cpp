@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <string.h>
 #include <stm32f4xx_hal.h>
 #include <stm32f4xx_hal_spi.h>
 #include "diag/Trace.h"
@@ -51,7 +52,7 @@ DepthSensor::DepthSensor()
 	spi.Init.CLKPolarity = SPI_POLARITY_LOW;
 	spi.Init.CLKPhase = SPI_PHASE_1EDGE;
 	spi.Init.NSS = SPI_NSS_SOFT;
-	spi.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+	spi.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
 	spi.Init.FirstBit = SPI_FIRSTBIT_MSB;
 	spi.Init.TIMode = SPI_TIMODE_DISABLED;
 	spi.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLED;
@@ -77,15 +78,17 @@ void DepthSensor::reset(void)
 
 void DepthSensor::read_prom(void)
 {
-	u8 cmd;
+	u8 cmd[3] = {};
+	u8 recv[3];
 
 	for(int i = 0; i < 8; i++) {
 		cs(true);
-		cmd = CMD_READ_PROM + i*2;
-		HAL_SPI_Transmit(&spi, &cmd, 1, TIMEOUT);
-		HAL_SPI_Receive(&spi, &prom[i*2], 2, TIMEOUT);
+		cmd[0] = CMD_READ_PROM + i*2;
+		HAL_SPI_TransmitReceive(&spi, cmd, recv, 3, TIMEOUT);
+		memcpy(&prom[i*2], &recv[1], 2);
 		cs(false);
 	}
+
 
 	for(int i = 0; i < 8; i++) {
 		u16 factor = ((u16)(prom[i*2]) << 8) + prom[i*2+1];
@@ -116,7 +119,7 @@ void DepthSensor::pin_enable(void)
 
 	gpio.Mode = GPIO_MODE_AF_PP;
 	gpio.Pull = GPIO_NOPULL;
-	gpio.Speed = GPIO_SPEED_HIGH;
+	gpio.Speed = GPIO_SPEED_LOW;
 	gpio.Alternate = DEPTH_SPI_AF;
 
 	// MOSI
@@ -151,26 +154,27 @@ void DepthSensor::pin_disable(void)
 
 inline u32 DepthSensor::sample(u8 cmd, DepthSampling osr)
 {
-	u8 recv[3];
+	u8 cmd_buf[4] = {};
+	u8 recv[4];
 	assert(osr >= DepthSampling::OSR_256 && osr <= DepthSampling::OSR_4096);
 	assert(cmd == CMD_SAMPLE_PRESSURE || cmd == CMD_SAMPLE_TEMPERATURE);
 
 	const sampling_type_t &sampling = SAMPLING_TYPE[osr];
 
-	cmd |= sampling.cmd;
+	cmd_buf[0] = cmd | sampling.cmd;
 	cs(true);
-	HAL_SPI_Transmit(&spi, &cmd, 1, TIMEOUT);
+	HAL_SPI_Transmit(&spi, cmd_buf, 1, TIMEOUT);
 	cs(false);
 
 	HAL_Delay(sampling.delay_us / 1000 + 1);
 
-	cmd = CMD_READ_ADC;
+	cmd_buf[0] = CMD_READ_ADC;
+
 	cs(true);
-	HAL_SPI_Transmit(&spi, &cmd, 1, TIMEOUT);
-	HAL_SPI_Receive(&spi, recv, sizeof(recv), TIMEOUT);
+	HAL_SPI_TransmitReceive(&spi, cmd_buf, recv, 4, TIMEOUT);
 	cs(false);
 
-	return recv[0] << 16 | recv[1] << 8 | recv[0];
+	return recv[1] << 16 | recv[2] << 8 | recv[3];
 }
 
 u32 DepthSensor::sample_temperature(DepthSampling osr)
@@ -231,6 +235,9 @@ void DepthSensor::convert_values(u32 pressure_in, u32 temperature_in, i32 &press
 	i64 off = ((i64)off_t1 << 18) + ((i64)tco * dt >> 5) - off2;
 	i64 sens = ((i64)sens_t1 << 17) + ((i64)tcs * dt >> 7) - sens2;
 	pressure_out = ((((i64)pressure_in * sens) >> 21) - off) >> 15;
+
+	assert(temperature_out >= TEMPERATURE_MIN && temperature_out <= TEMPERATURE_MAX);
+	assert(pressure_out >= PRESSURE_MIN && pressure_out <= PRESSURE_MAX);
 
 	trace_printf("%4d.%02d mbar, %d.%02d C\n", pressure_out / 100, pressure_out % 100, temperature_out / 100, (temperature_out > 0 ? temperature_out : -temperature_out) % 100);
 }

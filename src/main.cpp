@@ -42,7 +42,9 @@ int main(void)
 
 	__GPIOB_CLK_ENABLE();
 	__GPIOC_CLK_ENABLE();
-	SysTick_Config(SystemCoreClock / 1000);
+	SysTick_Config(SystemCoreClock / 8 / 1000);
+	__HAL_CORTEX_SYSTICKCLK_CONFIG(SYSTICK_CLKSOURCE_HCLK_DIV8);
+	NVIC_SetPriority(SysTick_IRQn, 0);
 
 
 	DepthSensor depth;
