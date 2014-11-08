@@ -11,9 +11,9 @@
 #include <cortexm/ExceptionHandlers.h>
 
 #include <stm32f4xx_hal.h>
-#include <stm32f4xx_hal_rcc.h>
 
 #include "depth.h"
+#include "timer.h"
 #include "types.h"
 
 static void rtc_init(void)
@@ -67,19 +67,4 @@ int main(void)
 		HAL_Delay(1000);
 	}
 
-}
-
-
-extern "C" void
-SysTick_Handler(void)
-{
-	HAL_IncTick();
-}
-
-void HAL_Delay(__IO uint32_t Delay)
-{
-	uint32_t tickstart = 0;
-	tickstart = HAL_GetTick();
-	while((HAL_GetTick() - tickstart) < Delay)
-		__WFI();
 }
