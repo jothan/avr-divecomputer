@@ -18,4 +18,6 @@ typedef int64_t i64;
 #define U8 UINT8_C
 #define I8 INT8_C
 
+#define FULL_BARRIER __sync_synchronize
+
 #endif

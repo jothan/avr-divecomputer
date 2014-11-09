@@ -1,6 +1,7 @@
 #ifndef DEPTH_H
 #define DEPTH_H
 
+#include "timer.h"
 #include "types.h"
 
 enum DepthSampling: unsigned {
@@ -12,24 +13,72 @@ enum DepthSampling: unsigned {
 };
 
 
+extern "C" void DMA1_Stream3_IRQHandler(void);
+extern "C" void DMA1_Stream4_IRQHandler(void);
+
 class DepthSensor {
+	enum State {UNINIT, WAIT_RESET, WAIT_PROM, WAIT_SAMPLE_SEND, WAIT_SAMPLE_ADC, WAIT_SAMPLE_RECV, NOPROM, READY, ERROR};
 public:
 	DepthSensor();
+	~DepthSensor();
 	void enable(void);
 	void disable(void);
 	void reset(void);
 	static u8 crc4(const u8 *data, size_t size);
 	void convert_values(u32 pressure_in, u32 temperature_in, i32 &pressure_out, i32 &temperature_out);
+	bool wait(void)
+	{
+		for(;;) {
+			FULL_BARRIER();
+			if(state == ERROR)
+				return false;
+			else if(state == READY)
+				return true;
+
+			__WFI();
+		}
+
+	}
+	void sample(DepthSampling osr, u32 *pressure, u32 *temperature);
 	u32 sample_temperature(DepthSampling osr);
-	u32 sample_pressure(DepthSampling osr);
 protected:
-	u8 prom[16];
+	static const size_t PROM_SIZE = 8;
+	u8 sample_cmd;
+	DepthSampling sample_osr;
+	u8 prom[PROM_SIZE*2];
+	u8 prom_idx;
+	u8 dma_tx_buf[4];
+	u8 dma_rx_buf[4];
+	u32 *out_pressure;
+	u32 *out_temperature;
 	SPI_HandleTypeDef spi;
+	DMA_HandleTypeDef dma_rx;
+	DMA_HandleTypeDef dma_tx;
+	TimerItem timer;
 	void pin_enable(void);
 	void pin_disable(void);
-	void read_prom(void);
+
 	void cs(bool);
-	u32 sample(u8 cmd, DepthSampling osr);
+	static void callback_timer(void *arg);
+	void callback_reset_tx(void);
+	void callback_reset_wait(void);
+	void read_prom(void);
+	void callback_read_prom(void);
+	void callback_dma_complete(void);
+	void callback_dma_error(void);
+	void sample_start(u32 cmd, DepthSampling osr);
+	void callback_sample_sent(void);
+	void callback_sample_sampled(void);
+	void callback_sample_done(void);
+	State state;
+	friend void DMA1_Stream3_IRQHandler(void);
+	friend void DMA1_Stream4_IRQHandler(void);
+	friend void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *spi);
+	friend void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *spi);
+	friend void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *spi);
+	friend void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *spi);
 };
+
+extern DepthSensor depth;
 
 #endif

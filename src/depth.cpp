@@ -1,7 +1,9 @@
 #include <assert.h>
 #include <string.h>
 #include <stm32f4xx_hal.h>
+#include <stm32f4xx_hal_dma.h>
 #include <stm32f4xx_hal_spi.h>
+#include <cortexm/ExceptionHandlers.h>
 #include "diag/Trace.h"
 
 #include "depth.h"
@@ -15,10 +17,14 @@ static const u8 CMD_SAMPLE_PRESSURE = 0x40;
 static const u8 CMD_SAMPLE_TEMPERATURE = 0x50;
 static const u8 CMD_READ_ADC = 0x00;
 static const u32 TIMEOUT = 100; // ms
+static const u32 RESET_DELAY = 3; // ms
 static const i32 PRESSURE_MIN = 0;
 static const i32 PRESSURE_MAX = 600000; // mbar * 100
 static const i32 TEMPERATURE_MIN = -4000; // C * 100
 static const i32 TEMPERATURE_MAX = 8500; // C * 100
+
+
+DepthSensor depth;
 
 // From Meas-Spec AN520 note.
 static 	u8 CRC_TEST_VECTOR[] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x40,0x41, 0x42, 0x43, 0x44,0x45, 0x0b};
@@ -45,6 +51,135 @@ static const sampling_type_t SAMPLING_TYPE[] = {
 
 DepthSensor::DepthSensor()
 {
+	timer.callback = DepthSensor::callback_timer;
+	timer.arg = this;
+	state = UNINIT;
+}
+
+DepthSensor::~DepthSensor()
+{
+	main_timer.cancel(&timer);
+	disable();
+}
+
+void DepthSensor::callback_timer(void *arg)
+{
+	DepthSensor &sensor = *(DepthSensor*)arg;
+
+	switch(sensor.state)
+	{
+	case WAIT_RESET:
+		sensor.callback_reset_wait();
+		break;
+	case WAIT_SAMPLE_ADC:
+		sensor.callback_sample_sampled();
+		break;
+	default:
+		assert(0);
+	}
+}
+
+inline void DepthSensor::cs(bool sel)
+{
+	HAL_GPIO_WritePin(DEPTH_CS_PIN.port, DEPTH_CS_PIN.number, sel ? GPIO_PIN_RESET : GPIO_PIN_SET);
+}
+
+void DepthSensor::reset(void)
+{
+	cs(true);
+
+	dma_tx_buf[0] = CMD_RESET;
+	// DMA does not like transferring a single outbound byte for some reason.
+	HAL_SPI_TransmitReceive_DMA(&spi, dma_tx_buf, dma_rx_buf, 1);
+	state = WAIT_RESET;
+}
+
+void DepthSensor::callback_reset_tx(void)
+{
+	main_timer.schedule(&timer, RESET_DELAY, false);
+	trace_printf("reset sent\n");
+}
+
+void DepthSensor::callback_reset_wait(void)
+{
+	cs(false);
+	state = NOPROM;
+	read_prom();
+}
+
+void DepthSensor::read_prom(void)
+{
+	trace_printf("Reading PROM.\n");
+	assert(state == NOPROM);
+	memset(dma_tx_buf, 0, sizeof(dma_tx_buf));
+	dma_tx_buf[0] = CMD_READ_PROM;
+	prom_idx = 0;
+
+	cs(true);
+	state = WAIT_PROM;
+	HAL_SPI_TransmitReceive_DMA(&spi, dma_tx_buf, dma_rx_buf, 3);
+}
+
+void DepthSensor::callback_read_prom(void)
+{
+	cs(false);
+
+	memcpy(&prom[prom_idx*2], &dma_rx_buf[1], 2);
+	trace_printf("prom[%u] = %04x\n", prom_idx, dma_rx_buf[1] << 8 | dma_rx_buf[2]);
+
+	prom_idx++;
+
+	if(prom_idx < PROM_SIZE) {
+		dma_tx_buf[0] = CMD_READ_PROM + prom_idx*2;
+		cs(true);
+		HAL_SPI_TransmitReceive_DMA(&spi, dma_tx_buf, dma_rx_buf, 3);
+	} else {
+		assert(crc4(prom, sizeof(prom)) == 0);
+		state = READY;
+	}
+}
+
+void DepthSensor::enable(void)
+{
+
+	dma_rx.Instance = DMA1_Stream3;
+	dma_rx.Init.Channel = DMA_CHANNEL_0;
+	dma_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+	dma_rx.Init.PeriphInc = DMA_PINC_DISABLE;
+	dma_rx.Init.MemInc = DMA_MINC_ENABLE;
+	dma_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+	dma_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+	dma_rx.Init.Mode = DMA_NORMAL;
+	dma_rx.Init.Priority = DMA_PRIORITY_MEDIUM;
+	dma_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+	dma_rx.Init.MemBurst = DMA_MBURST_SINGLE;
+	dma_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;
+	HAL_DMA_Init(&dma_rx);
+	__HAL_LINKDMA(&spi, hdmarx, dma_rx);
+
+	dma_tx.Instance = DMA1_Stream4;
+	dma_tx.Init.Channel = DMA_CHANNEL_0;
+	dma_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+	dma_tx.Init.PeriphInc = DMA_PINC_DISABLE;
+	dma_tx.Init.MemInc = DMA_MINC_ENABLE;
+	dma_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+	dma_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+	dma_tx.Init.Mode = DMA_NORMAL;
+	dma_tx.Init.Priority = DMA_PRIORITY_MEDIUM;
+	dma_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+	dma_tx.Init.MemBurst = DMA_MBURST_SINGLE;
+	dma_tx.Init.PeriphBurst = DMA_PBURST_SINGLE;
+	HAL_DMA_Init(&dma_tx);
+	__HAL_LINKDMA(&spi, hdmatx, dma_tx);
+
+	HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
+	HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 5, 0);
+	HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
+
+	HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 5, 0);
+	HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+
+	DEPTH_SPI_ENABLE();
 	spi.Instance = DEPTH_SPI;
 	spi.Init.Mode = SPI_MODE_MASTER;
 	spi.Init.Direction = SPI_DIRECTION_2LINES;
@@ -57,60 +192,93 @@ DepthSensor::DepthSensor()
 	spi.Init.TIMode = SPI_TIMODE_DISABLED;
 	spi.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLED;
 	spi.Init.CRCPolynomial = 0xffff;
-}
-
-inline void DepthSensor::cs(bool sel)
-{
-	HAL_GPIO_WritePin(DEPTH_CS_PIN.port, DEPTH_CS_PIN.number, sel ? GPIO_PIN_RESET : GPIO_PIN_SET);
-}
-
-void DepthSensor::reset(void)
-{
-	u8 cmd = CMD_RESET;
-
-	cs(true);
-
-	HAL_SPI_Transmit(&spi, &cmd, 1, TIMEOUT);
-	HAL_Delay(3);
-
-	cs(false);
-}
-
-void DepthSensor::read_prom(void)
-{
-	u8 cmd[3] = {};
-	u8 recv[3];
-
-	for(int i = 0; i < 8; i++) {
-		cs(true);
-		cmd[0] = CMD_READ_PROM + i*2;
-		HAL_SPI_TransmitReceive(&spi, cmd, recv, 3, TIMEOUT);
-		memcpy(&prom[i*2], &recv[1], 2);
-		cs(false);
-	}
-
-
-	for(int i = 0; i < 8; i++) {
-		u16 factor = ((u16)(prom[i*2]) << 8) + prom[i*2+1];
-		trace_printf("%d: 0x%04x %d\n", i, factor, factor);
-	}
-	assert(crc4(prom, sizeof(prom)) == 0);
-}
-
-void DepthSensor::enable(void)
-{
-	DEPTH_SPI_ENABLE();
 	HAL_SPI_Init(&spi);
 	pin_enable();
 
 	reset();
-	read_prom();
+}
+
+extern "C"
+void DMA1_Stream3_IRQHandler(void)
+{
+	HAL_DMA_IRQHandler(depth.spi.hdmarx);
+}
+
+extern "C"
+void DMA1_Stream4_IRQHandler(void)
+{
+	HAL_DMA_IRQHandler(depth.spi.hdmatx);
+}
+
+void DepthSensor::callback_dma_complete(void)
+{
+	switch(state) {
+	case WAIT_RESET:
+		callback_reset_tx();
+		break;
+	case WAIT_PROM:
+		callback_read_prom();
+		break;
+	case WAIT_SAMPLE_SEND:
+		callback_sample_sent();
+		break;
+	case WAIT_SAMPLE_RECV:
+		callback_sample_done();
+		break;
+	default:
+		assert(0);
+	}
+}
+
+void DepthSensor::callback_dma_error(void)
+{
+	trace_printf("DMA error !\n");
+	assert(0);
+}
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *spi)
+{
+	if(spi->Instance != SPI2)
+		assert(0);
+
+	depth.callback_dma_complete();
+}
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *spi)
+{
+	if(spi->Instance != SPI2)
+		assert(0);
+
+	depth.callback_dma_complete();
+}
+
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *spi)
+{
+	if(spi->Instance != SPI2)
+		assert(0);
+
+	depth.callback_dma_complete();
+}
+
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *spi)
+{
+	if(spi->Instance != SPI2)
+		assert(0);
+
+	depth.callback_dma_error();
 }
 
 void DepthSensor::disable(void)
 {
 	pin_disable();
+	HAL_SPI_DeInit(&spi);
 	DEPTH_SPI_DISABLE();
+
+	NVIC_DisableIRQ(DMA1_Stream3_IRQn);
+	NVIC_DisableIRQ(DMA1_Stream4_IRQn);
+	HAL_DMA_DeInit(&dma_rx);
+	HAL_DMA_DeInit(&dma_tx);
+	state = UNINIT;
 }
 
 void DepthSensor::pin_enable(void)
@@ -118,7 +286,7 @@ void DepthSensor::pin_enable(void)
 	GPIO_InitTypeDef gpio;
 
 	gpio.Mode = GPIO_MODE_AF_PP;
-	gpio.Pull = GPIO_NOPULL;
+	gpio.Pull = GPIO_PULLUP;
 	gpio.Speed = GPIO_SPEED_LOW;
 	gpio.Alternate = DEPTH_SPI_AF;
 
@@ -133,7 +301,6 @@ void DepthSensor::pin_enable(void)
 	// MISO
 	gpio.Pin = DEPTH_MISO_PIN.number;
 	gpio.Mode = GPIO_MODE_AF_PP;
-	gpio.Pull = GPIO_PULLUP;
 	HAL_GPIO_Init(DEPTH_MISO_PIN.port, &gpio);
 
 	// CS
@@ -152,39 +319,68 @@ void DepthSensor::pin_disable(void)
 	HAL_GPIO_DeInit(DEPTH_CS_PIN.port, DEPTH_CS_PIN.number);
 }
 
-inline u32 DepthSensor::sample(u8 cmd, DepthSampling osr)
+void DepthSensor::sample(DepthSampling osr, u32 *pressure, u32 *temperature)
 {
-	u8 cmd_buf[4] = {};
-	u8 recv[4];
-	assert(osr >= DepthSampling::OSR_256 && osr <= DepthSampling::OSR_4096);
-	assert(cmd == CMD_SAMPLE_PRESSURE || cmd == CMD_SAMPLE_TEMPERATURE);
+	assert(out_pressure == NULL && out_temperature == NULL);
 
+	out_pressure = pressure;
+	out_temperature = temperature;
+
+	sample_start(CMD_SAMPLE_PRESSURE, osr);
+}
+
+void DepthSensor::sample_start(u32 cmd, DepthSampling osr)
+{
+	assert(osr >= DepthSampling::OSR_256 && osr <= DepthSampling::OSR_4096);
+	assert(state == READY || state == WAIT_SAMPLE_RECV);
 	const sampling_type_t &sampling = SAMPLING_TYPE[osr];
 
-	cmd_buf[0] = cmd | sampling.cmd;
+	sample_cmd = cmd;
+	sample_osr = osr;
+	dma_tx_buf[0] = sample_cmd | sampling.cmd;
 	cs(true);
-	HAL_SPI_Transmit(&spi, cmd_buf, 1, TIMEOUT);
-	cs(false);
-
-	HAL_Delay(sampling.delay_us / 1000 + 1);
-
-	cmd_buf[0] = CMD_READ_ADC;
-
-	cs(true);
-	HAL_SPI_TransmitReceive(&spi, cmd_buf, recv, 4, TIMEOUT);
-	cs(false);
-
-	return recv[1] << 16 | recv[2] << 8 | recv[3];
+	HAL_SPI_TransmitReceive_DMA(&spi, dma_tx_buf, dma_rx_buf, 1);
+	state = WAIT_SAMPLE_SEND;
 }
 
-u32 DepthSensor::sample_temperature(DepthSampling osr)
+void DepthSensor::callback_sample_sent(void)
 {
-	return sample(CMD_SAMPLE_TEMPERATURE, osr);
+	const sampling_type_t &sampling = SAMPLING_TYPE[sample_osr];
+
+	cs(false);
+	state = WAIT_SAMPLE_ADC;
+	main_timer.schedule(&timer, sampling.delay_us / 1000 + 1, false);
 }
 
-u32 DepthSensor::sample_pressure(DepthSampling osr)
+void DepthSensor::callback_sample_sampled(void)
 {
-	return sample(CMD_SAMPLE_PRESSURE, osr);
+	cs(true);
+
+	memset(dma_tx_buf, 0, 4);
+	dma_tx_buf[0] = CMD_READ_ADC;
+
+	state = WAIT_SAMPLE_RECV;
+	HAL_SPI_TransmitReceive_DMA(&spi, dma_tx_buf, dma_rx_buf, 4);
+}
+
+void DepthSensor::callback_sample_done(void)
+{
+	u32 result = dma_rx_buf[1] << 16 | dma_rx_buf[2] << 8 | dma_rx_buf[3];
+	cs(false);
+
+	if(sample_cmd == CMD_SAMPLE_PRESSURE) {
+		assert(out_pressure != NULL);
+		*out_pressure = result;
+		out_pressure = NULL;
+		sample_start(CMD_SAMPLE_TEMPERATURE, sample_osr);
+	} else if(sample_cmd == CMD_SAMPLE_TEMPERATURE) {
+		assert(out_temperature != NULL);
+		*out_temperature = result;
+		out_temperature = NULL;
+		FULL_BARRIER();
+		state = READY;
+	} else
+		assert(0);
 }
 
 /*
@@ -238,7 +434,5 @@ void DepthSensor::convert_values(u32 pressure_in, u32 temperature_in, i32 &press
 
 	assert(temperature_out >= TEMPERATURE_MIN && temperature_out <= TEMPERATURE_MAX);
 	assert(pressure_out >= PRESSURE_MIN && pressure_out <= PRESSURE_MAX);
-
-	trace_printf("%4d.%02d mbar, %d.%02d C\n", pressure_out / 100, pressure_out % 100, temperature_out / 100, (temperature_out > 0 ? temperature_out : -temperature_out) % 100);
 }
 
