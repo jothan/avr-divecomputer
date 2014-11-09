@@ -13,7 +13,7 @@ class TimerItem
 {
 public:
 	TimerItem() {
-		next = NULL;
+		active = false;
 	}
 	timer_callback_t *callback;
 	void *arg;
@@ -23,6 +23,7 @@ protected:
 	TimerItem *next;
 	u32 rot;
 	u32 reload;
+	bool active;
 };
 
 class TimerWheel

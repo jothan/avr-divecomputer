@@ -32,6 +32,7 @@ void TimerWheel::tick(void)
 			*prev = item->next;
 
 			item->next = NULL;
+			item->active = false;
 			if(item->reload != 0)
 				schedule(item, item->reload, true);
 		} else
@@ -41,7 +42,7 @@ void TimerWheel::tick(void)
 
 void TimerWheel::schedule(TimerItem *item, u32 ticks, bool reload)
 {
-	assert(item->next == NULL);
+	assert(item->active == false);
 	assert(item->callback);
 	assert(ticks > 0);
 
@@ -53,12 +54,16 @@ void TimerWheel::schedule(TimerItem *item, u32 ticks, bool reload)
 
 	item->next = slots[slot_num];
 	slots[slot_num] = item;
+	item->active = true;
 
 	NVIC_EnableIRQ(SysTick_IRQn);
 }
 
 bool TimerWheel::cancel(TimerItem *item)
 {
+	if(!item->active)
+		return false;
+
 	NVIC_DisableIRQ(SysTick_IRQn);
 
 	for(size_t slot_num=0; slot_num < TIMER_WHEEL_SLOTS; slot_num++){
@@ -71,6 +76,7 @@ bool TimerWheel::cancel(TimerItem *item)
 			if(litem == item) {
 				*prev = litem->next;
 				litem->next = NULL;
+				litem->active = false;
 				NVIC_EnableIRQ(SysTick_IRQn);
 				return true;
 			} else
