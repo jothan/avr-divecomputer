@@ -1,3 +1,7 @@
+/*
+ * Driver for the MS5803-05BA pressure and temperature sensor.
+ */
+
 #include <assert.h>
 #include <string.h>
 #include <stm32f4xx_hal.h>
