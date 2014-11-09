@@ -23,6 +23,7 @@ void TimerWheel::tick(void)
 
 	TimerItem **prev = &slots[current_slot];
 	TimerItem *next;
+	TimerItem *resched = NULL;
 
 	for(TimerItem *item = slots[current_slot]; item != NULL; item = next) {
 		next = item->next;
@@ -31,12 +32,18 @@ void TimerWheel::tick(void)
 
 			*prev = item->next;
 
-			item->next = NULL;
 			item->active = false;
-			if(item->reload != 0)
-				schedule(item, item->reload, true);
+			if(item->reload != 0) {
+				item->next = resched;
+				resched = item;
+			}
 		} else
 			prev = &item->next;
+	}
+
+	for(TimerItem *item = resched; item != NULL; item = next) {
+		next = item->next;
+		schedule(item, item->reload, true);
 	}
 }
 
