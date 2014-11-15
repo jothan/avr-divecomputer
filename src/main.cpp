@@ -14,6 +14,7 @@
 #include <stm32f4xx_hal.h>
 
 #include "depth.h"
+#include "screen.h"
 #include "timer.h"
 #include "types.h"
 
@@ -42,6 +43,8 @@ int main(void)
 
 	__GPIOB_CLK_ENABLE();
 	__GPIOC_CLK_ENABLE();
+	__GPIOD_CLK_ENABLE();
+	__GPIOE_CLK_ENABLE();
 
 	__DMA1_CLK_ENABLE();
 	__DMA1_CLK_SLEEP_ENABLE();
@@ -55,6 +58,7 @@ int main(void)
 	trace_printf("System clock: %uHz\n", SystemCoreClock);
 	rtc_init();
 	trace_printf("RTC ready to go.\n");
+	screen.enable();
 	depth.enable();
 
 	assert(depth.wait());
