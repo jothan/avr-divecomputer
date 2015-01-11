@@ -19,7 +19,7 @@ u16 * const SCREEN_DATA    = (u16*)0x60020000;
 // Borrowed from u8glib.
 static const u8 init_seq[] = {
 		0x0ae,                           /* display off, sleep mode */
-		0x0b3, 0x021,                    /* set display clock divide ratio/oscillator frequency */
+		0x0b3, 0x00,                    /* set display clock divide ratio/oscillator frequency */
 		0x0a8, 0x03f,                    /* multiplex ratio: 0x03f * 1/64 duty */
 		0x0a2, 0x000,                    /* display offset, shift mapping ram counter */
 		0x0a1, 0x000,                    /* display start line */
@@ -28,7 +28,7 @@ static const u8 init_seq[] = {
 		0x086,                           /* full current range (0x084, 0x085, 0x086) */
 		0x0b8,                           /* set gray scale table */
 		0x01, 0x011, 0x022, 0x032, 0x043, 0x054, 0x065, 0x076,
-		0x081, 0x07f,                    /* contrast, brightness, 0..128, Newhaven: 0x040 */
+		0x081, 0x040,                    /* contrast, brightness, 0..128, Newhaven: 0x040 */
 		0x0b2, 0x051,                    /* frame frequency (row period) */
 		0x0b1, 0x055,                    /* phase length */
 		0x0bc, 0x008,                    /* pre-charge voltage level */

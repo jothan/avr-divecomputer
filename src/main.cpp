@@ -14,6 +14,7 @@
 #include <stm32f4xx_hal.h>
 
 #include "depth.h"
+#include "sdcard.h"
 #include "screen.h"
 #include "timer.h"
 #include "types.h"
@@ -59,6 +60,7 @@ int main(void)
 	rtc_init();
 	trace_printf("RTC ready to go.\n");
 	screen.enable();
+	sdcard.enable();
 	depth.enable();
 
 	assert(depth.wait());
