@@ -1,0 +1,3 @@
+[submodule "uos"]
+	path = lib/uos
+	url = git://git.code.sf.net/p/micro-os-plus/iii

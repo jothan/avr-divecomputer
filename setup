@@ -1,24 +1,18 @@
 #!/bin/bash
 set -e
 
-FATFS_FILE=ff10b.zip
+FATFS_FILE=ff10c.zip
 FATFS_URL="http://elm-chan.org/fsw/ff/$FATFS_FILE"
-
-SYSTEM_FILE=stm32-system.tar.bz2
-SYSTEM_URL="https://dl.dropboxusercontent.com/u/56487493/$SYSTEM_FILE"
 
 BASE_DIR=$(readlink -f `dirname "$0"`)
 cd "$BASE_DIR"
+git submodule update --init
 
 mkdir -p dld lib
 
 cd dld
 if [ ! -e "$FATFS_FILE" ]; then
     wget "$FATFS_URL"
-fi
-
-if [ ! -e "$SYSTEM_FILE" ]; then
-    wget "$SYSTEM_URL"
 fi
 
 cd ../lib
@@ -33,7 +27,9 @@ cp "../../dist/integer.h" src
 cd "$BASE_DIR"
 
 rm -rf system
-pwd
-tar xjf "dld/$SYSTEM_FILE"
+mkdir system
+cd system
 
-echo Success
+while read pack; do
+    cp -a "../lib/uos/packages/$pack/." .
+done < ../lib/uos-packs

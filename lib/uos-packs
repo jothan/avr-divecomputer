@@ -1,0 +1,7 @@
+architectures/arm/arm.pack
+architectures/arm/cortexm.pack
+portable/diag.pack
+portable/newlib.pack
+vendors/stm/stm32f4-hal.pack
+vendors/stm/stm32f4-tests.pack
+vendors/stm/stm32f4.pack
