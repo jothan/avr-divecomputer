@@ -17,6 +17,7 @@ env = Environment(
         'system/include',
         'system/include/cmsis',
         'system/include/stm32f4-hal',
+        'lib/u8glib/src',
     ],
     CPPDEFINES= {
         'OS_USE_TRACE_SEMIHOSTING_STDOUT': None,
@@ -44,6 +45,10 @@ env.Library('runtimenogc',
     Glob('system/src/newlib/*.c')
 )
 
+u8env = env.Clone()
+u8env.Append(CANDCXXFLAGS=' -Wno-unused-parameter -Wno-missing-declarations -Wno-unused-variable -Wno-unused-function')
+u8env.Library('u8glib', Glob('lib/u8glib/src/*'))
+
 Default(env.Command('DiveComputer.hex', 'DiveComputer', '$OBJCOPY -O ihex $SOURCES $TARGET'))
 env.Command('upload_phony', 'DiveComputer.hex', 'openocd -f board/stm32f4discovery.cfg -c init -c "reset halt" -c "flash write_image erase ${SOURCES}" -c "verify_image ${SOURCES}" -c shutdown')
 env.Alias('upload', 'upload_phony')
@@ -51,4 +56,4 @@ env.Alias('upload', 'upload_phony')
 env.Command('run_phony', 'DiveComputer.hex', 'openocd -f board/stm32f4discovery.cfg -c init -c "reset halt" -c "arm semihosting enable" -c "reset run"')
 env.Alias('run', 'run_phony')
 
-env.Program('DiveComputer', Glob('src/*.c') + Glob('src/*.cpp'), LIBS=['runtime', 'runtimenogc'], LINKFLAGS='$LINKFLAGS -Wl,--whole-archive -lruntimenogc -Wl,--no-whole-archive')
+env.Program('DiveComputer', Glob('src/*.c') + Glob('src/*.cpp'), LIBS=['runtime', 'runtimenogc', 'u8glib'], LINKFLAGS='$LINKFLAGS -Wl,--whole-archive -lruntimenogc -Wl,--no-whole-archive')

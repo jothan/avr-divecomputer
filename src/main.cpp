@@ -38,6 +38,7 @@ static void rtc_init(void)
 
 int main(void)
 {
+	char buf1[16], buf2[16];
 #ifdef DEBUG
 	HAL_EnableDBGSleepMode();
 #endif
@@ -68,13 +69,34 @@ int main(void)
 	u32 temperature, pressure;
 	for(;;) {
 		depth.sample(sampling, &pressure, &temperature);
-		HAL_Delay(1000);
+		HAL_Delay(100);
 		depth.wait();
 
 		i32 comp_pressure;
 		i32 comp_temperature;
 		depth.convert_values(pressure, temperature, comp_pressure, comp_temperature);
-		trace_printf("%4d.%02d mbar, %d.%02d C\n", comp_pressure / 100, comp_pressure % 100, comp_temperature / 100, (comp_temperature > 0 ? comp_temperature : -comp_temperature) % 100);
+
+		snprintf(buf1, sizeof(buf1), "%04ld.%02ld mbar ",
+			 comp_pressure / 100, comp_pressure % 100);
+		snprintf(buf2, sizeof(buf2), "%ld.%02ld C",
+			 comp_temperature / 100, (comp_temperature > 0 ? comp_temperature : -comp_temperature) % 100);
+		u8g_FirstPage(&screen.u8g);
+		do {
+			u8g_SetColorIndex(&screen.u8g, 1);
+
+			u8g_DrawHLine(&screen.u8g, 0, 0, 128);
+			u8g_DrawHLine(&screen.u8g, 0, 63, 128);
+			u8g_DrawVLine(&screen.u8g, 0, 0, 64);
+			u8g_DrawVLine(&screen.u8g, 127, 0, 64);
+
+			u8g_SetColorIndex(&screen.u8g, 3);
+			u8g_SetFont(&screen.u8g, u8g_font_ncenR12);
+			u8g_DrawStr(&screen.u8g, 10, 27, buf1);
+
+			u8g_SetColorIndex(&screen.u8g, 2);
+			u8g_SetFont(&screen.u8g, u8g_font_ncenR12);
+			u8g_DrawStr(&screen.u8g, 28, 46, buf2);
+		} while (u8g_NextPage(&screen.u8g));
 	}
 
 }
