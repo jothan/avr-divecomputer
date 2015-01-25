@@ -7,7 +7,7 @@ env = Environment(
     OBJCOPY='$TOOLCHAIN/arm-none-eabi-objcopy',
     CCLDFLAGS='-mthumb -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -Og',
     CONLYFLAGS='-std=gnu11',
-    CANDCXXFLAGS='$CCLDFLAGS -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wunused -Wuninitialized -Wall -Wextra -Wmissing-declarations -Wpointer-arith -Wshadow -Wlogical-op -Waggregate-return -Wfloat-equal -g3 -fabi-version=0 -fno-exceptions -Wabi',
+    CANDCXXFLAGS='$CCLDFLAGS -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wunused -Wuninitialized -Wall -Wextra -Wmissing-declarations -Wpointer-arith -Wshadow -Wlogical-op -Waggregate-return -Wfloat-equal -g3 -fabi-version=0 -fno-exceptions -Wabi -u _printf_float',
     LINKFLAGS='$CCLDFLAGS -T mem.ld -T libs.ld -T sections.ld -nostartfiles --specs=nano.specs -Wl,--gc-sections',
     CFLAGS='$CANDCXXFLAGS $CONLYFLAGS',
     CXXFLAGS='$CANDCXXFLAGS -Wnoexcept -Wctor-dtor-privacy  -Wsign-promo -fno-threadsafe-statics -Wnon-virtual-dtor -fno-rtti -Wstrict-null-sentinel -fno-use-cxa-atexit -std=gnu++11',
