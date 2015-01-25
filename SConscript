@@ -7,8 +7,8 @@ env = Environment(
     OBJCOPY='$TOOLCHAIN/arm-none-eabi-objcopy',
     CCLDFLAGS='-mthumb -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -Og',
     CONLYFLAGS='-std=gnu11',
-    CANDCXXFLAGS='$CCLDFLAGS -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wunused -Wuninitialized -Wall -Wextra -Wmissing-declarations -Wpointer-arith -Wshadow -Wlogical-op -Waggregate-return -Wfloat-equal -g3 -fabi-version=0 -fno-exceptions -Wabi -u _printf_float',
-    LINKFLAGS='$CCLDFLAGS -T mem.ld -T libs.ld -T sections.ld -nostartfiles --specs=nano.specs -Wl,--gc-sections',
+    CANDCXXFLAGS='$CCLDFLAGS -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wunused -Wuninitialized -Wall -Wextra -Wmissing-declarations -Wpointer-arith -Wshadow -Wlogical-op -Waggregate-return -Wfloat-equal -g3 -fabi-version=0 -fno-exceptions -Wabi',
+    LINKFLAGS='$CCLDFLAGS -T mem.ld -T libs.ld -T sections.ld -nostartfiles --specs=nano.specs -Wl,--gc-sections -u _printf_float',
     CFLAGS='$CANDCXXFLAGS $CONLYFLAGS',
     CXXFLAGS='$CANDCXXFLAGS -Wnoexcept -Wctor-dtor-privacy  -Wsign-promo -fno-threadsafe-statics -Wnon-virtual-dtor -fno-rtti -Wstrict-null-sentinel -fno-use-cxa-atexit -std=gnu++11',
     CPPPATH=[
@@ -56,4 +56,4 @@ env.Alias('upload', 'upload_phony')
 env.Command('run_phony', 'DiveComputer.hex', 'openocd -f board/stm32f4discovery.cfg -c init -c "reset halt" -c "arm semihosting enable" -c "reset run"')
 env.Alias('run', 'run_phony')
 
-env.Program('DiveComputer', Glob('src/*.c') + Glob('src/*.cpp'), LIBS=['runtime', 'runtimenogc', 'u8glib'], LINKFLAGS='$LINKFLAGS -Wl,--whole-archive -lruntimenogc -Wl,--no-whole-archive')
+env.Program('DiveComputer', Glob('src/*.c') + Glob('src/*.cpp'), LIBS=['runtime', 'runtimenogc', 'u8glib', 'm'], LINKFLAGS='$LINKFLAGS -Wl,--whole-archive -lruntimenogc -Wl,--no-whole-archive')
