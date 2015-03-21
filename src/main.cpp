@@ -11,6 +11,8 @@
 #include <diag/Trace.h>
 #include <cortexm/ExceptionHandlers.h>
 
+#include <array>
+
 #include <stm32f4xx_hal.h>
 
 #include "depth.h"
@@ -119,6 +121,9 @@ int main(void) {
 	}
 
 	trace_printf("---%f---", tabN2[0]);
+
+	const int arraysize = 10;
+	  std::array <int, arraysize> a;
 
 	for (;;) {
 

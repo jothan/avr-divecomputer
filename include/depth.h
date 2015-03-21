@@ -16,11 +16,11 @@ enum DepthSampling: unsigned {
 extern "C" void DMA1_Stream3_IRQHandler(void);
 extern "C" void DMA1_Stream4_IRQHandler(void);
 
-class DepthSensor {
+class PressureSensor {
 	enum State {UNINIT, WAIT_RESET, WAIT_PROM, WAIT_SAMPLE_SEND, WAIT_SAMPLE_ADC, WAIT_SAMPLE_RECV, NOPROM, READY, ERROR};
 public:
-	DepthSensor();
-	~DepthSensor();
+	PressureSensor();
+	~PressureSensor();
 	void enable(void);
 	void disable(void);
 	void reset(void);
@@ -79,6 +79,6 @@ protected:
 	friend void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *spi);
 };
 
-extern DepthSensor depth;
+extern PressureSensor depth;
 
 #endif

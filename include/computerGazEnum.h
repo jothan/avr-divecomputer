@@ -1,0 +1,1 @@
+enum gazType { Air, Nitrox, Trimix};

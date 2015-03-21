@@ -1,0 +1,1 @@
+enum lang { fr, eng};

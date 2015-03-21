@@ -28,7 +28,7 @@ static const i32 TEMPERATURE_MIN = -4000; // C * 100
 static const i32 TEMPERATURE_MAX = 8500; // C * 100
 
 
-DepthSensor depth;
+PressureSensor depth;
 
 // From Meas-Spec AN520 note.
 static 	u8 CRC_TEST_VECTOR[] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x40,0x41, 0x42, 0x43, 0x44,0x45, 0x0b};
@@ -53,22 +53,22 @@ static const sampling_type_t SAMPLING_TYPE[] = {
 		{9040, 0x08}, // OSR = 4096
 };
 
-DepthSensor::DepthSensor()
+PressureSensor::PressureSensor()
 {
-	timer.callback = DepthSensor::callback_timer;
+	timer.callback = PressureSensor::callback_timer;
 	timer.arg = this;
 	state = UNINIT;
 }
 
-DepthSensor::~DepthSensor()
+PressureSensor::~PressureSensor()
 {
 	main_timer.cancel(&timer);
 	disable();
 }
 
-void DepthSensor::callback_timer(void *arg)
+void PressureSensor::callback_timer(void *arg)
 {
-	DepthSensor &sensor = *(DepthSensor*)arg;
+	PressureSensor &sensor = *(PressureSensor*)arg;
 
 	switch(sensor.state)
 	{
@@ -83,12 +83,12 @@ void DepthSensor::callback_timer(void *arg)
 	}
 }
 
-inline void DepthSensor::cs(bool sel)
+inline void PressureSensor::cs(bool sel)
 {
 	HAL_GPIO_WritePin(DEPTH_CS_PIN.port, DEPTH_CS_PIN.number, sel ? GPIO_PIN_RESET : GPIO_PIN_SET);
 }
 
-void DepthSensor::reset(void)
+void PressureSensor::reset(void)
 {
 	cs(true);
 
@@ -98,20 +98,20 @@ void DepthSensor::reset(void)
 	state = WAIT_RESET;
 }
 
-void DepthSensor::callback_reset_tx(void)
+void PressureSensor::callback_reset_tx(void)
 {
 	main_timer.schedule(&timer, RESET_DELAY, false);
 	trace_printf("reset sent\n");
 }
 
-void DepthSensor::callback_reset_wait(void)
+void PressureSensor::callback_reset_wait(void)
 {
 	cs(false);
 	state = NOPROM;
 	read_prom();
 }
 
-void DepthSensor::read_prom(void)
+void PressureSensor::read_prom(void)
 {
 	trace_printf("Reading PROM.\n");
 	assert(state == NOPROM);
@@ -124,7 +124,7 @@ void DepthSensor::read_prom(void)
 	HAL_SPI_TransmitReceive_DMA(&spi, dma_tx_buf, dma_rx_buf, 3);
 }
 
-void DepthSensor::callback_read_prom(void)
+void PressureSensor::callback_read_prom(void)
 {
 	cs(false);
 
@@ -143,9 +143,8 @@ void DepthSensor::callback_read_prom(void)
 	}
 }
 
-void DepthSensor::enable(void)
+void PressureSensor::enable(void)
 {
-
 	dma_rx.Instance = DMA1_Stream3;
 	dma_rx.Init.Channel = DMA_CHANNEL_0;
 	dma_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
@@ -214,7 +213,7 @@ void DMA1_Stream4_IRQHandler(void)
 	HAL_DMA_IRQHandler(depth.spi.hdmatx);
 }
 
-void DepthSensor::callback_dma_complete(void)
+void PressureSensor::callback_dma_complete(void)
 {
 	switch(state) {
 	case WAIT_RESET:
@@ -234,7 +233,7 @@ void DepthSensor::callback_dma_complete(void)
 	}
 }
 
-void DepthSensor::callback_dma_error(void)
+void PressureSensor::callback_dma_error(void)
 {
 	trace_printf("DMA error !\n");
 	assert(0);
@@ -272,7 +271,7 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *spi)
 	depth.callback_dma_error();
 }
 
-void DepthSensor::disable(void)
+void PressureSensor::disable(void)
 {
 	pin_disable();
 	HAL_SPI_DeInit(&spi);
@@ -285,7 +284,7 @@ void DepthSensor::disable(void)
 	state = UNINIT;
 }
 
-void DepthSensor::pin_enable(void)
+void PressureSensor::pin_enable(void)
 {
 	GPIO_InitTypeDef gpio;
 
@@ -315,7 +314,7 @@ void DepthSensor::pin_enable(void)
 	HAL_GPIO_Init(DEPTH_CS_PIN.port, &gpio);
 }
 
-void DepthSensor::pin_disable(void)
+void PressureSensor::pin_disable(void)
 {
 	HAL_GPIO_DeInit(DEPTH_MOSI_PIN.port, DEPTH_MOSI_PIN.number);
 	HAL_GPIO_DeInit(DEPTH_SCK_PIN.port, DEPTH_SCK_PIN.number);
@@ -323,7 +322,7 @@ void DepthSensor::pin_disable(void)
 	HAL_GPIO_DeInit(DEPTH_CS_PIN.port, DEPTH_CS_PIN.number);
 }
 
-void DepthSensor::sample(DepthSampling osr, u32 *pressure, u32 *temperature)
+void PressureSensor::sample(DepthSampling osr, u32 *pressure, u32 *temperature)
 {
 	assert(out_pressure == NULL && out_temperature == NULL);
 
@@ -333,7 +332,7 @@ void DepthSensor::sample(DepthSampling osr, u32 *pressure, u32 *temperature)
 	sample_start(CMD_SAMPLE_PRESSURE, osr);
 }
 
-void DepthSensor::sample_start(u32 cmd, DepthSampling osr)
+void PressureSensor::sample_start(u32 cmd, DepthSampling osr)
 {
 	assert(osr >= DepthSampling::OSR_256 && osr <= DepthSampling::OSR_4096);
 	assert(state == READY || state == WAIT_SAMPLE_RECV);
@@ -347,7 +346,7 @@ void DepthSensor::sample_start(u32 cmd, DepthSampling osr)
 	state = WAIT_SAMPLE_SEND;
 }
 
-void DepthSensor::callback_sample_sent(void)
+void PressureSensor::callback_sample_sent(void)
 {
 	const sampling_type_t &sampling = SAMPLING_TYPE[sample_osr];
 
@@ -356,7 +355,7 @@ void DepthSensor::callback_sample_sent(void)
 	main_timer.schedule(&timer, sampling.delay_us / 1000 + 1, false);
 }
 
-void DepthSensor::callback_sample_sampled(void)
+void PressureSensor::callback_sample_sampled(void)
 {
 	cs(true);
 
@@ -367,7 +366,7 @@ void DepthSensor::callback_sample_sampled(void)
 	HAL_SPI_TransmitReceive_DMA(&spi, dma_tx_buf, dma_rx_buf, 4);
 }
 
-void DepthSensor::callback_sample_done(void)
+void PressureSensor::callback_sample_done(void)
 {
 	u32 result = dma_rx_buf[1] << 16 | dma_rx_buf[2] << 8 | dma_rx_buf[3];
 	cs(false);
@@ -390,7 +389,7 @@ void DepthSensor::callback_sample_done(void)
 /*
  * Compute CRC-4 over the whole PROM block, returns 0 on success.
  */
-u8 DepthSensor::crc4(const u8 *data, size_t size)
+u8 PressureSensor::crc4(const u8 *data, size_t size)
 {
 	u16 rem = 0;
 
@@ -404,7 +403,7 @@ u8 DepthSensor::crc4(const u8 *data, size_t size)
 	return rem >> 12;
 }
 
-void DepthSensor::convert_values(u32 pressure_in, u32 temperature_in, i32 &pressure_out, i32 &temperature_out)
+void PressureSensor::convert_values(u32 pressure_in, u32 temperature_in, i32 &pressure_out, i32 &temperature_out)
 {
 	u16 sens_t1 = prom_to_u16(prom, 1);
 	u16 off_t1 = prom_to_u16(prom, 2);
@@ -439,4 +438,3 @@ void DepthSensor::convert_values(u32 pressure_in, u32 temperature_in, i32 &press
 	assert(temperature_out >= TEMPERATURE_MIN && temperature_out <= TEMPERATURE_MAX);
 	assert(pressure_out >= PRESSURE_MIN && pressure_out <= PRESSURE_MAX);
 }
-
