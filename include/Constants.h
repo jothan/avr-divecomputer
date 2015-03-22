@@ -4,7 +4,7 @@
 class GlobalConstants {
   public:
     static const float pressure_water;
-    static const float initialAmbienPressure;
+    static const float initial_Ambient_Pressure;
     static const float NITROGEN_AIR;
 };
 
