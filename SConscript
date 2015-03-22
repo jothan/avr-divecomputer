@@ -29,6 +29,7 @@ env = Environment(
         'HSE_VALUE': '8000000',
     },
     LIBPATH=['.', '#system/ldscripts', '#system/led-test/ldscripts'],
+    OPENOCD_FLAGS='-f board/stm32f4discovery.cfg -c init'
 )
 
 
@@ -50,12 +51,15 @@ u8env.Append(CANDCXXFLAGS=' -Wno-unused-parameter -Wno-missing-declarations -Wno
 u8env.Library('u8glib', Glob('lib/u8glib/csrc/*') + Glob('lib/u8glib/sfntsrc/*.c'))
 
 Default(env.Command('DiveComputer.hex', 'DiveComputer', '$OBJCOPY -O ihex $SOURCES $TARGET'))
-upload = env.Command('upload_phony', 'DiveComputer.hex', 'openocd -f board/stm32f4discovery.cfg -c init -c "reset halt" -c "flash write_image erase ${SOURCES}" -c "verify_image ${SOURCES}" -c shutdown')
+upload = env.Command('upload_phony', 'DiveComputer.hex', 'openocd $OPENOCD_FLAGS -c "reset halt" -c "flash write_image erase ${SOURCES}" -c "verify_image ${SOURCES}" -c shutdown')
 env.Alias('upload', 'upload_phony')
 
-run = env.Command('run_phony', 'DiveComputer.hex', 'openocd -f board/stm32f4discovery.cfg -c init -c "reset halt" -c "arm semihosting enable" -c "reset run"')
-
-SideEffect('openocd', upload + run)
+run = env.Command('run_phony', 'DiveComputer.hex', 'openocd $OPENOCD_FLAGS -c "reset halt" -c "arm semihosting enable" -c "reset run"')
 env.Alias('run', 'run_phony')
+
+attach = env.Command('attach_phony', 'DiveComputer.hex', 'openocd $OPENOCD_FLAGS -c "reset halt" -c "arm semihosting enable"')
+env.Alias('attach', 'attach_phony')
+
+SideEffect('openocd', upload + run + attach)
 
 env.Program('DiveComputer', Glob('src/*.c') + Glob('src/*.cpp'), LIBS=['runtime', 'runtimenogc', 'u8glib', 'm'], LINKFLAGS='$LINKFLAGS -Wl,--whole-archive -lruntimenogc -Wl,--no-whole-archive')
