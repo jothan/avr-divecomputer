@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-FATFS_FILE=fatfs10c.zip
+FATFS_FILE=ff11.zip
 U8GLIB_VERSION=1.17
 U8GLIB_FILE="u8glib-$U8GLIB_VERSION.tar.gz"
 
@@ -21,7 +21,7 @@ cd "$BASE_DIR"
 mkdir -p dld lib
 
 cd dld
-download "http://elm-chan.org/fsw/ff/ff10c.zip" "$FATFS_FILE"
+download "http://elm-chan.org/fsw/ff/$FATFS_FILE" "$FATFS_FILE"
 download "https://u8glib.googlecode.com/archive/v$U8GLIB_VERSION.tar.gz" "$U8GLIB_FILE"
 cd ..
 
