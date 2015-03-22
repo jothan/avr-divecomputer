@@ -50,3 +50,4 @@ cd system
 while read pack; do
     cp -a "../lib/uos/packages/$pack/." .
 done < ../lib/uos-packs
+patch -s -p1 -i ../dist/sd-capacity-fix.diff
