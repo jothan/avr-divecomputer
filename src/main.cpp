@@ -122,9 +122,6 @@ int main(void) {
 
 	trace_printf("---%f---", tabN2[0]);
 
-	const int arraysize = 10;
-	  std::array <int, arraysize> a;
-
 	for (;;) {
 
 //		i32 comp_pressure;

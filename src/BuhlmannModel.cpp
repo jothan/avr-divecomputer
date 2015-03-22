@@ -20,7 +20,7 @@ BuhlmannModel::BuhlmannModel() {
 		for (int i = 0; i < MAX_TISSUE; i++) {
 
 			CompartmentTissue compartmentTissue = CompartmentTissue();
-			compartmentTissue.ppN2 = GlobalConstants::NITROGEN_AIR * (GlobalConstants::ambiant_pressure - GlobalConstants::pressure_water);
+			//compartmentTissue.ppN2 = GlobalConstants::NITROGEN_AIR * (GlobalConstants::ambiant_pressure - GlobalConstants::pressure_water);
 
 			tissue[i] = compartmentTissue;
 		}
