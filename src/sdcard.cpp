@@ -47,4 +47,5 @@ void SdCard::enable(void)
 	err = HAL_SD_ReadBlocks(&handle, (u32*)buf, 0, 512, 1);
 	trace_printf("sd read: %u\n", err);
 
+	trace_printf("card capacity: %u MiB\n", (u32)(cs.CardCapacity / (1024*1024)));
 }
