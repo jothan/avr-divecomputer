@@ -1,1 +1,1 @@
-enum lang { fr, eng};
+enum class lang { fr, eng};

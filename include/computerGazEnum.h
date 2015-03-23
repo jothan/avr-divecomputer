@@ -1,1 +1,1 @@
-enum gazType { Air, Nitrox, Trimix};
+enum class gazType { Air, Nitrox, Trimix};
