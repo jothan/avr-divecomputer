@@ -18,6 +18,7 @@ env = Environment(
         'system/include/cmsis',
         'system/include/stm32f4-hal',
         'lib/u8glib/csrc',
+        'lib/fatfs/src',
     ],
     CPPDEFINES= {
         'OS_USE_TRACE_SEMIHOSTING_STDOUT': None,
@@ -37,7 +38,9 @@ env.Library('runtime',
     Glob('system/src/cortexm/*.c') +
     Glob('system/src/diag/*.c') +
     Glob('system/src/newlib/*.cpp') +
-    Glob('system/src/stm32f4-hal/*.c')
+    Glob('system/src/stm32f4-hal/*.c') +
+    Glob('lib/fatfs/src/*.c') +
+    Glob('lib/fatfs/src/option/unicode.c')
 )
 
 env.Library('runtimenogc',
