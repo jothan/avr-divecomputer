@@ -438,3 +438,11 @@ void PressureSensor::convert_values(u32 pressure_in, u32 temperature_in, i32 &pr
 	assert(temperature_out >= TEMPERATURE_MIN && temperature_out <= TEMPERATURE_MAX);
 	assert(pressure_out >= PRESSURE_MIN && pressure_out <= PRESSURE_MAX);
 }
+
+void PressureSensor::getPressureValueInBar(){
+    
+}
+
+void PressureSensor::getTemperatureValueInCelsius(){
+    
+}

@@ -2,8 +2,8 @@
 #include "langEnum.h"
 
 class ConfigComputer {
-	gazType computerGaz=Air;
-	lang default_lang=eng;
+	gazType computerGaz=gazType::Air;
+	lang default_lang=lang::eng;
 	int units;
 public:
 	void set_values(char, int);

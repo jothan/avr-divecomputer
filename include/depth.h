@@ -21,6 +21,8 @@ class PressureSensor {
 public:
 	PressureSensor();
 	~PressureSensor();
+        void getTemperatureValueInCelsius();
+        void getPressureValueInBar();
 	void enable(void);
 	void disable(void);
 	void reset(void);
