@@ -59,20 +59,43 @@ int main(void) {
 	rtc_init();
 	trace_printf("RTC ready to go.\n");
 	screen.enable();
-	sdcard.enable();
 	depth.enable();
-
 	assert(depth.wait());
 	trace_printf("Depth sensor ready to go.\n");
 	u32 temperature, pressure;
-
 	i32 comp_pressure;
 	i32 comp_temperature;
+	FRESULT fres;
+
+	fres = f_mount(&sdcard_ff, "0", 1);
+	trace_printf("fres mount: %d\n", fres);
+	{
+		DIR d;
+		FILINFO fi;
+
+		char lfn[_MAX_LFN + 1];
+		fi.lfname = lfn;
+		fi.lfsize = sizeof(lfn);
+
+		fres = f_opendir(&d, "/");
+		trace_printf("fres opendir: %d\n", fres);
+
+		for(;;) {
+			fres = f_readdir(&d, &fi);
+			if(fres != FR_OK || fi.fname[0] == 0)
+				break;
+
+			trace_printf("file: %s\n", *fi.lfname ? fi.lfname : fi.fname);
+		}
+		f_closedir(&d);
+	}
+	FIL f;
+	fres = f_open(&f, "/log.txt", FA_WRITE | FA_OPEN_ALWAYS);
+	trace_printf("fres open: %d\n", fres);
+	fres = f_lseek(&f, f_size(&f));
+	trace_printf("fres seek: %d\n", fres);
 
 	for (;;) {
-
-//		i32 comp_pressure;
-//		i32 comp_temperature;
 		depth.sample(sampling, &pressure, &temperature);
 		HAL_Delay(100);
 		depth.wait();
@@ -80,11 +103,16 @@ int main(void) {
 		depth.convert_values(pressure, temperature, comp_pressure,
 				comp_temperature);
 
-		snprintf(buf1, sizeof(buf1), "%04ld.%02ld mbar ", comp_pressure / 100,
+		snprintf(buf1, sizeof(buf1), "%04ld.%02ld mbar\n", comp_pressure / 100,
 				comp_pressure % 100);
-		snprintf(buf2, sizeof(buf2), "%ld.%02ld C", comp_temperature / 100,
+		fres = f_write(&f, buf1, strlen(buf1), NULL);
+		snprintf(buf2, sizeof(buf2), "%ld.%02ld C\n", comp_temperature / 100,
 				(comp_temperature > 0 ? comp_temperature : -comp_temperature)
 						% 100);
+		fres = f_write(&f, buf2, strlen(buf2), NULL);
+
+		fres = f_sync(&f);
+		trace_printf("fres sync: %d\n", fres);
 		u8g_FirstPage(&screen.u8g);
 		do {
 			u8g_SetColorIndex(&screen.u8g, 1);

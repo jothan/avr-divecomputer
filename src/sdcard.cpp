@@ -5,15 +5,18 @@
 #include <stm32f4xx_hal_gpio.h>
 #include <stm32f4xx_hal_sd.h>
 
+#include "ff.h"
+#include "diskio.h"
+
 #include "types.h"
 #include "sdcard.h"
 
 SdCard sdcard;
+FATFS sdcard_ff;
 
-void SdCard::enable(void)
+int SdCard::enable(void)
 {
 	GPIO_InitTypeDef gpio;
-	u8 buf[512];
 
 	gpio.Alternate = GPIO_AF12_SDIO;
 	gpio.Mode = GPIO_MODE_AF_PP;
@@ -26,7 +29,6 @@ void SdCard::enable(void)
 	gpio.Pin = GPIO_PIN_2;
 	HAL_GPIO_Init(GPIOD, &gpio);
 
-	SD_HandleTypeDef handle;
 	HAL_SD_CardInfoTypedef cs;
 	HAL_SD_ErrorTypedef err;
 
@@ -40,12 +42,81 @@ void SdCard::enable(void)
 	handle.Init.ClockDiv = 0;
 	err = HAL_SD_Init(&handle, &cs);
 	trace_printf("sd init: %u\n", err);
+	if(err != SD_OK)
+		return 1;
 
 	err = HAL_SD_WideBusOperation_Config(&handle, SDIO_BUS_WIDE_4B);
 	trace_printf("sd wide: %u\n", err);
-
-	err = HAL_SD_ReadBlocks(&handle, (u32*)buf, 0, 512, 1);
-	trace_printf("sd read: %u\n", err);
+	if(err != SD_OK)
+		return 1;
 
 	trace_printf("card capacity: %u MiB\n", (u32)(cs.CardCapacity / (1024*1024)));
+	return 0;
 }
+
+DSTATUS disk_status (BYTE pdrv)
+{
+	if(pdrv != SDCARD_DRIVE)
+		return STA_NOINIT;
+
+	return 0;
+}
+
+DSTATUS disk_initialize (BYTE pdrv)
+{
+	trace_printf("disk_initialize drv: %d\n", pdrv);
+	if(pdrv != SDCARD_DRIVE)
+		return STA_NOINIT;
+
+	if(sdcard.enable() != 0)
+		return STA_NOINIT;
+	else
+		return 0;
+}
+
+DRESULT disk_read(BYTE pdrv, BYTE *buff, DWORD sector, UINT count)
+{
+	HAL_SD_ErrorTypedef sderr;
+	u64 addr = (u64)sector * 512;
+
+	trace_printf("disk_read drv=%d %d@%d\n", pdrv, count, sector);
+	if(pdrv != SDCARD_DRIVE)
+		return RES_PARERR;
+
+
+	sderr = HAL_SD_ReadBlocks(&sdcard.handle, (uint32_t*)buff, addr, 512, count);
+
+	return sderr == SD_OK ? RES_OK : RES_PARERR;
+}
+
+#if _USE_WRITE
+DRESULT disk_write(BYTE pdrv, const BYTE *buff, DWORD sector, UINT count)
+{
+	trace_printf("disk_write drv=%d %d@%d\n", pdrv, count, sector);
+	HAL_SD_ErrorTypedef sderr;
+	u64 addr = (u64)sector * 512;
+
+	if(pdrv != SDCARD_DRIVE)
+		return RES_PARERR;
+
+	sderr = HAL_SD_WriteBlocks(&sdcard.handle, (uint32_t*)buff, addr, 512, count);
+
+	return sderr == SD_OK ? RES_OK : RES_PARERR;
+}
+#endif
+
+#if _USE_IOCTL
+DRESULT disk_ioctl(BYTE pdrv, BYTE cmd, void *buff)
+{
+	if(pdrv != SDCARD_DRIVE)
+		return RES_PARERR;
+
+	switch(cmd) {
+	case CTRL_SYNC:
+		// no write cache
+		return RES_OK;
+	}
+
+	return RES_PARERR;
+}
+#endif

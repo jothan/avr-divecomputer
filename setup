@@ -34,7 +34,7 @@ mkdir fatfs
 cd fatfs
 unzip -q "$BASE_DIR/dld/$FATFS_FILE"
 rm -- src/diskio.* src/ffconf.h
-cp "../../dist/integer.h" src
+rm -f src/integer.h
 
 cd ..
 rm -rf u8glib
@@ -50,4 +50,3 @@ cd system
 while read pack; do
     cp -a "../lib/uos/packages/$pack/." .
 done < ../lib/uos-packs
-patch -s -p1 -i ../dist/sd-capacity-fix.diff
