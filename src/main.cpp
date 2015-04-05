@@ -106,7 +106,6 @@ int main(void) {
 		fres = f_write(&f, buf2, strlen(buf2), NULL);
 
 		fres = f_sync(&f);
-		trace_printf("fres sync: %d\n", fres);
 		u8g_FirstPage(&screen.u8g);
 		do {
 			u8g_SetColorIndex(&screen.u8g, 1);
