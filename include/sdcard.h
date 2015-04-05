@@ -1,6 +1,8 @@
 #ifndef SDCARD_H
 #define SDCARD_H
 
+#include <stm32f4xx_hal_sd.h>
+
 #include "ff.h"
 #include "integer.h"
 
