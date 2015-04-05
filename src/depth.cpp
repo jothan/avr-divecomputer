@@ -293,7 +293,7 @@ void PressureSensor::pin_enable(void)
 	gpio.Mode = GPIO_MODE_AF_PP;
 	gpio.Pull = GPIO_PULLUP;
 	gpio.Speed = GPIO_SPEED_LOW;
-	gpio.Alternate = DEPTH_SPI_AF;
+	gpio.Alternate = DEPTH_MOSI_PIN.af;
 
 	// MOSI
 	gpio.Pin = DEPTH_MOSI_PIN.number;
