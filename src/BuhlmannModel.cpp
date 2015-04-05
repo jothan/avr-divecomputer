@@ -9,28 +9,39 @@
 #include "Constants.h"
 #include "CompartmentTissue.h"
 #include <array>
+#include "depth.h"
+#include "ff.h"
 
 BuhlmannModel::BuhlmannModel() {
 
-	//si fichier existe et qu'il y a des valeurs
-	if(1>2){
-		int x = 2;
-	}else{
+    //si fichier existe et qu'il y a des valeurs
 
-		for (int i = 0; i < MAX_TISSUE; i++) {
+    FRESULT fres;
+    FIL f;
 
-			CompartmentTissue compartmentTissue = CompartmentTissue();
-			//compartmentTissue.ppN2 = GlobalConstants::NITROGEN_AIR * (GlobalConstants::ambiant_pressure - GlobalConstants::pressure_water);
+    fres = f_open(&f, "/tissues.txt", FA_WRITE | FA_OPEN_ALWAYS);
+    if (fres) {
+        char line[80];
+        while (f_gets(line, sizeof line, &f)){
+            
+        }
+        
+    } else {
 
-			tissue[i] = compartmentTissue;
-		}
+        for (int i = 0; i < MAX_TISSUE; i++) {
+            CompartmentTissue compartmentTissue = CompartmentTissue();
+            compartmentTissue.ppN2 = GlobalConstants::NITROGEN_AIR * (depth.get_pressure_bar() - GlobalConstants::pressure_water);
+            tissue[i] = compartmentTissue;
+        }
 
-	}
-	//sinon
+    }
 
 }
 
 BuhlmannModel::~BuhlmannModel() {
-	// TODO Auto-generated destructor stub
+    // TODO Auto-generated destructor stub
 }
 
+void BuhlmannModel::AscendDescend() {
+
+}
