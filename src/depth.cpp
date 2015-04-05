@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 #include <stm32f4xx_hal.h>
 #include <stm32f4xx_hal_dma.h>
 #include <stm32f4xx_hal_spi.h>
@@ -54,6 +55,7 @@ static const sampling_type_t SAMPLING_TYPE[] = {
 };
 
 PressureSensor::PressureSensor()
+	:raw_pressure(0), raw_temperature(0), last_pressure(NAN), last_temperature(NAN)
 {
 	timer.callback = PressureSensor::callback_timer;
 	timer.arg = this;
@@ -326,6 +328,8 @@ void PressureSensor::sample(DepthSampling osr)
 {
 	raw_pressure = 0;
 	raw_temperature = 0;
+	last_pressure = NAN;
+	last_temperature = NAN;
 
 	sample_start(CMD_SAMPLE_PRESSURE, osr);
 }
@@ -372,10 +376,12 @@ void PressureSensor::callback_sample_done(void)
 	if(sample_cmd == CMD_SAMPLE_PRESSURE) {
 		assert(raw_pressure == 0);
 		raw_pressure = result;
+
 		sample_start(CMD_SAMPLE_TEMPERATURE, sample_osr);
 	} else if(sample_cmd == CMD_SAMPLE_TEMPERATURE) {
 		i32 comp_temperature;
 		i32 comp_pressure;
+
 		assert(raw_temperature == 0);
 		raw_temperature = result;
 
@@ -443,12 +449,12 @@ void PressureSensor::convert_values(u32 pressure_in, u32 temperature_in, i32 &pr
 
 float PressureSensor::get_pressure_bar()
 {
-	assert(state == READY);
+	assert(state == READY && !isnan(last_pressure));
 	return last_pressure;
 }
 
 float PressureSensor::get_temperature_celcius()
 {
-	assert(state == READY);
+	assert(state == READY && !isnan(last_pressure));
 	return last_temperature;
 }
