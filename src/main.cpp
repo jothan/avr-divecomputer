@@ -62,9 +62,7 @@ int main(void) {
 	depth.enable();
 	assert(depth.wait());
 	trace_printf("Depth sensor ready to go.\n");
-	u32 temperature, pressure;
-	i32 comp_pressure;
-	i32 comp_temperature;
+	float temperature, pressure;
 	FRESULT fres;
 
 	fres = f_mount(&sdcard_ff, "0", 1);
@@ -96,19 +94,15 @@ int main(void) {
 	trace_printf("fres seek: %d\n", fres);
 
 	for (;;) {
-		depth.sample(sampling, &pressure, &temperature);
+		depth.sample(sampling);
 		HAL_Delay(100);
 		depth.wait();
+		pressure = depth.get_pressure_bar();
+		temperature = depth.get_temperature_celcius();
 
-		depth.convert_values(pressure, temperature, comp_pressure,
-				comp_temperature);
-
-		snprintf(buf1, sizeof(buf1), "%04ld.%02ld mbar\n", comp_pressure / 100,
-				comp_pressure % 100);
+		snprintf(buf1, sizeof(buf1), "%.2f mbar\n", pressure*1000.);
 		fres = f_write(&f, buf1, strlen(buf1), NULL);
-		snprintf(buf2, sizeof(buf2), "%ld.%02ld C\n", comp_temperature / 100,
-				(comp_temperature > 0 ? comp_temperature : -comp_temperature)
-						% 100);
+		snprintf(buf2, sizeof(buf2), "%05.2f C\n", temperature);
 		fres = f_write(&f, buf2, strlen(buf2), NULL);
 
 		fres = f_sync(&f);

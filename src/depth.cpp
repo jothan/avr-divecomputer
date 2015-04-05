@@ -322,12 +322,10 @@ void PressureSensor::pin_disable(void)
 	HAL_GPIO_DeInit(DEPTH_CS_PIN.port, DEPTH_CS_PIN.number);
 }
 
-void PressureSensor::sample(DepthSampling osr, u32 *pressure, u32 *temperature)
+void PressureSensor::sample(DepthSampling osr)
 {
-	assert(out_pressure == NULL && out_temperature == NULL);
-
-	out_pressure = pressure;
-	out_temperature = temperature;
+	raw_pressure = 0;
+	raw_temperature = 0;
 
 	sample_start(CMD_SAMPLE_PRESSURE, osr);
 }
@@ -372,14 +370,18 @@ void PressureSensor::callback_sample_done(void)
 	cs(false);
 
 	if(sample_cmd == CMD_SAMPLE_PRESSURE) {
-		assert(out_pressure != NULL);
-		*out_pressure = result;
-		out_pressure = NULL;
+		assert(raw_pressure == 0);
+		raw_pressure = result;
 		sample_start(CMD_SAMPLE_TEMPERATURE, sample_osr);
 	} else if(sample_cmd == CMD_SAMPLE_TEMPERATURE) {
-		assert(out_temperature != NULL);
-		*out_temperature = result;
-		out_temperature = NULL;
+		i32 comp_temperature;
+		i32 comp_pressure;
+		assert(raw_temperature == 0);
+		raw_temperature = result;
+
+		convert_values(raw_pressure, raw_temperature, comp_pressure, comp_temperature);
+		last_temperature = (float)comp_temperature / 100.0f;
+		last_pressure = (float)comp_pressure / 100000.0f;
 		FULL_BARRIER();
 		state = READY;
 	} else
@@ -439,10 +441,14 @@ void PressureSensor::convert_values(u32 pressure_in, u32 temperature_in, i32 &pr
 	assert(pressure_out >= PRESSURE_MIN && pressure_out <= PRESSURE_MAX);
 }
 
-void PressureSensor::getPressureValueInBar(){
-    
+float PressureSensor::get_pressure_bar()
+{
+	assert(state == READY);
+	return last_pressure;
 }
 
-void PressureSensor::getTemperatureValueInCelsius(){
-    
+float PressureSensor::get_temperature_celcius()
+{
+	assert(state == READY);
+	return last_temperature;
 }

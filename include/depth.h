@@ -21,8 +21,6 @@ class PressureSensor {
 public:
 	PressureSensor();
 	~PressureSensor();
-        void getTemperatureValueInCelsius();
-        void getPressureValueInBar();
 	void enable(void);
 	void disable(void);
 	void reset(void);
@@ -41,8 +39,9 @@ public:
 		}
 
 	}
-	void sample(DepthSampling osr, u32 *pressure, u32 *temperature);
-	u32 sample_temperature(DepthSampling osr);
+	void sample(DepthSampling osr);
+	float get_pressure_bar();
+	float get_temperature_celcius();
 protected:
 	static const size_t PROM_SIZE = 8;
 	u8 sample_cmd;
@@ -51,8 +50,10 @@ protected:
 	u8 prom_idx;
 	u8 dma_tx_buf[4];
 	u8 dma_rx_buf[4];
-	u32 *out_pressure;
-	u32 *out_temperature;
+	u32 raw_pressure;
+	u32 raw_temperature;
+	float last_pressure;
+	float last_temperature;
 	SPI_HandleTypeDef spi;
 	DMA_HandleTypeDef dma_rx;
 	DMA_HandleTypeDef dma_tx;
