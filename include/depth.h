@@ -1,6 +1,9 @@
 #ifndef DEPTH_H
 #define DEPTH_H
 
+#include <stm32f4xx_hal_dma.h>
+#include <stm32f4xx_hal_spi.h>
+
 #include "timer.h"
 #include "types.h"
 
