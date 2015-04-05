@@ -11,6 +11,8 @@
 #include "types.h"
 #include "sdcard.h"
 
+#define BLOCKSIZE 512
+
 SdCard sdcard;
 FATFS sdcard_ff;
 
@@ -77,14 +79,14 @@ DSTATUS disk_initialize (BYTE pdrv)
 DRESULT disk_read(BYTE pdrv, BYTE *buff, DWORD sector, UINT count)
 {
 	HAL_SD_ErrorTypedef sderr;
-	u64 addr = (u64)sector * 512;
+	u64 addr = (u64)sector * BLOCKSIZE;
 
 	trace_printf("disk_read drv=%d %d@%d\n", pdrv, count, sector);
 	if(pdrv != SDCARD_DRIVE)
 		return RES_PARERR;
 
 
-	sderr = HAL_SD_ReadBlocks(&sdcard.handle, (uint32_t*)buff, addr, 512, count);
+	sderr = HAL_SD_ReadBlocks(&sdcard.handle, (uint32_t*)buff, addr, BLOCKSIZE, count);
 
 	return sderr == SD_OK ? RES_OK : RES_PARERR;
 }
@@ -94,12 +96,12 @@ DRESULT disk_write(BYTE pdrv, const BYTE *buff, DWORD sector, UINT count)
 {
 	trace_printf("disk_write drv=%d %d@%d\n", pdrv, count, sector);
 	HAL_SD_ErrorTypedef sderr;
-	u64 addr = (u64)sector * 512;
+	u64 addr = (u64)sector * BLOCKSIZE;
 
 	if(pdrv != SDCARD_DRIVE)
 		return RES_PARERR;
 
-	sderr = HAL_SD_WriteBlocks(&sdcard.handle, (uint32_t*)buff, addr, 512, count);
+	sderr = HAL_SD_WriteBlocks(&sdcard.handle, (uint32_t*)buff, addr, BLOCKSIZE, count);
 
 	return sderr == SD_OK ? RES_OK : RES_PARERR;
 }
