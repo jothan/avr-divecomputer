@@ -1,4 +1,4 @@
-#include "Constants.h"
+#include "constants.h"
 
 const float GlobalConstants::pressure_water = 0.0627;
 const float GlobalConstants::initial_Ambient_Pressure = 1.013;

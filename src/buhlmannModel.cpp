@@ -5,12 +5,13 @@
  *      Author: collinm
  */
 
-#include "BuhlmannModel.h"
-#include "Constants.h"
-#include "CompartmentTissue.h"
-#include <array>
+#include "buhlmannModel.h"
+#include "constants.h"
+#include "compartmentTissue.h"
 #include "depth.h"
 #include "ff.h"
+
+#include <array>
 
 BuhlmannModel::BuhlmannModel() {
 

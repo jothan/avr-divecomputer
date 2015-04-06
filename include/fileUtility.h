@@ -15,12 +15,15 @@ using namespace std;
 
 class FileUtility {
 public:
-    FileUtility(const char *fileName, BYTE mode);
+    FileUtility(const char *fileName);
     map<std::string, string> readAllFile();
     void writeAllProperties(map <string, string> fileMapConfig);
     virtual ~FileUtility();
 private:
     FIL f;
+    const char *fileName;
+    void fileOpen(BYTE mode);
+    void fileClose();
 };
 
 #endif	/* FILEUTILITY_H */

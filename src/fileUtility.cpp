@@ -7,15 +7,19 @@
 
 #include "fileUtility.h"
 #include "ff.h"
+
 #include <string>
 #include <diag/Trace.h>
 #include <map>
 
 using namespace std;
 
-FileUtility::FileUtility(const char *fileName, BYTE mode) {
-    FRESULT fres;
+FileUtility::FileUtility(const char *fileName) {
+    this->fileName=fileName;
+}
 
+void FileUtility::fileOpen(BYTE mode) {
+    FRESULT fres;
     fres = f_open(&f, fileName, mode);
     if (fres) {
         trace_printf("error, file don't exist");
@@ -23,6 +27,9 @@ FileUtility::FileUtility(const char *fileName, BYTE mode) {
 }
 
 map<std::string, string> FileUtility::readAllFile() {
+    
+    fileOpen(FA_READ);
+    
     char line[80];
 
     map <string, string> fileMapConfig;
@@ -62,6 +69,8 @@ map<std::string, string> FileUtility::readAllFile() {
 
 void FileUtility::writeAllProperties(map <string, string> fileMapConfig) {
 
+    fileOpen(FA_WRITE);
+    
     for (auto it = fileMapConfig.begin(); it != fileMapConfig.end(); ++it) {
         string line = it->first + "=" + it->second;
         f_puts(line.c_str(), &f);

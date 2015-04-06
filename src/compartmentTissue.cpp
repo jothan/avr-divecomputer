@@ -5,7 +5,7 @@
  *      Author: collinm
  */
 
-#include "CompartmentTissue.h"
+#include "compartmentTissue.h"
 
 CompartmentTissue::CompartmentTissue() {
     kHe = 0;

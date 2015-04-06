@@ -8,8 +8,10 @@
 #ifndef BUHLMANNMODEL_H_
 #define BUHLMANNMODEL_H_
 
+
+#include "compartmentTissue.h"
+
 #include <array>
-#include "CompartmentTissue.h"
 
 using namespace std;
 
