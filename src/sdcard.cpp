@@ -66,7 +66,6 @@ DSTATUS disk_status (BYTE pdrv)
 
 DSTATUS disk_initialize (BYTE pdrv)
 {
-	trace_printf("disk_initialize drv: %d\n", pdrv);
 	if(pdrv != SDCARD_DRIVE)
 		return STA_NOINIT;
 
@@ -81,7 +80,6 @@ DRESULT disk_read(BYTE pdrv, BYTE *buff, DWORD sector, UINT count)
 	HAL_SD_ErrorTypedef sderr;
 	u64 addr = (u64)sector * BLOCKSIZE;
 
-	trace_printf("disk_read drv=%d %d@%d\n", pdrv, count, sector);
 	if(pdrv != SDCARD_DRIVE)
 		return RES_PARERR;
 
@@ -94,7 +92,6 @@ DRESULT disk_read(BYTE pdrv, BYTE *buff, DWORD sector, UINT count)
 #if _USE_WRITE
 DRESULT disk_write(BYTE pdrv, const BYTE *buff, DWORD sector, UINT count)
 {
-	trace_printf("disk_write drv=%d %d@%d\n", pdrv, count, sector);
 	HAL_SD_ErrorTypedef sderr;
 	u64 addr = (u64)sector * BLOCKSIZE;
 
