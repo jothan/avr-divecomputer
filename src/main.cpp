@@ -21,19 +21,19 @@
 #include "timer.h"
 #include "types.h"
 
-static void rtc_init(void) {
-	HAL_PWR_EnableBkUpAccess();
-
-	__HAL_RCC_LSE_CONFIG(RCC_LSE_ON); unsigned
-	int loop = 0;
-
-	for (; __HAL_RCC_GET_FLAG(RCC_FLAG_LSERDY) == 0; loop++)
-		__WFI();
-
-	trace_printf("LSE ready after %d loops.\n", loop);
-
-	__HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE); __HAL_RCC_RTC_ENABLE();
-}
+//static void rtc_init(void) {
+//	HAL_PWR_EnableBkUpAccess();
+//
+//	__HAL_RCC_LSE_CONFIG(RCC_LSE_ON); unsigned
+//	int loop = 0;
+//
+//	for (; __HAL_RCC_GET_FLAG(RCC_FLAG_LSERDY) == 0; loop++)
+//		__WFI();
+//
+//	trace_printf("LSE ready after %d loops.\n", loop);
+//
+//	__HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE); __HAL_RCC_RTC_ENABLE();
+//}
 
 int main(void) {
 	char buf1[16], buf2[16];
@@ -56,7 +56,7 @@ int main(void) {
 	DepthSampling sampling = DepthSampling::OSR_4096;
 
 	trace_printf("System clock: %uHz\n", SystemCoreClock);
-	rtc_init();
+	//rtc_init();
 	trace_printf("RTC ready to go.\n");
 	screen.enable();
 	depth.enable();
