@@ -197,8 +197,14 @@ configure_system_clock(void) {
     HAL_RTC_GetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
     HAL_RTC_GetDate(&RtcHandle, &dateStruct, FORMAT_BIN);
    
-    trace_printf("date  %.2u-.2ud-%d " , dateStruct.Date, dateStruct.Month,dateStruct.Year);
-    trace_printf("time  %.2u:%.2u:%.2u " , timeStruct.Hours,timeStruct.Minutes, timeStruct.Seconds);
+    trace_printf("date  %.2u-%.2u-%d \n" , dateStruct.Date, dateStruct.Month,dateStruct.Year);
+    trace_printf("time  %.2u:%.2u:%.2u \n" , timeStruct.Hours,timeStruct.Minutes, timeStruct.Seconds);
+    
+    
+    HAL_Delay(10000);
+    HAL_RTC_GetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
+    trace_printf("time  %.2u:%.2u:%.2u \n" , timeStruct.Hours,timeStruct.Minutes, timeStruct.Seconds);
+    
 }
 
 
