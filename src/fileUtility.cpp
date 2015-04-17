@@ -76,10 +76,10 @@ void FileUtility::writeAllProperties(map <string, string> fileMapConfig) {
         f_puts(line.c_str(), &f);
     }
 
+     f_close(&f);
 
 }
 
 FileUtility::~FileUtility() {
-    f_close(&f);
 }
 

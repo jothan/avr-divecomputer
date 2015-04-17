@@ -8,7 +8,7 @@
 #include "buhlmannModel.h"
 #include "constants.h"
 #include "compartmentTissue.h"
-#include "depth.h"
+#include "pressureSensor.h"
 #include "ff.h"
 
 #include <array>
@@ -31,7 +31,7 @@ BuhlmannModel::BuhlmannModel() {
 
         for (int i = 0; i < MAX_TISSUE; i++) {
             CompartmentTissue compartmentTissue = CompartmentTissue();
-            compartmentTissue.ppN2 = GlobalConstants::NITROGEN_AIR * (depth.get_pressure_bar() - GlobalConstants::pressure_water);
+            compartmentTissue.ppN2 = GlobalConstants::NITROGEN_AIR * (pressureSensor.get_pressure_bar() - GlobalConstants::pressure_water);
             tissue[i] = compartmentTissue;
         }
 
@@ -44,5 +44,7 @@ BuhlmannModel::~BuhlmannModel() {
 }
 
 void BuhlmannModel::AscendDescend() {
-
+    for (int i = 0; i < MAX_TISSUE; i++) {
+        
+    }
 }

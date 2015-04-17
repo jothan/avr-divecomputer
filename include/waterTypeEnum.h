@@ -1,0 +1,1 @@
+enum class waterType { FreshWater, SaltWater};

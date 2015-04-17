@@ -44,10 +44,12 @@ public:
 
 	}
 	void sample(DepthSampling osr);
+        float get_depth();
 	float get_pressure_bar();
 	float get_temperature_celcius();
 protected:
 	static const size_t PROM_SIZE = 8;
+        float initial_atm_pressure;
 	u8 sample_cmd;
 	DepthSampling sample_osr;
 	u8 prom[PROM_SIZE*2];
@@ -86,6 +88,6 @@ protected:
 	friend void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *spi);
 };
 
-extern PressureSensor depth;
+extern PressureSensor pressureSensor;
 
 #endif

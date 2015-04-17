@@ -10,6 +10,8 @@
 #include "stm32f4xx_hal_cortex.h"
 #include "stm32f4xx_hal_rtc.h"
 
+#include <time.h> 
+
 #include <diag/Trace.h>
 
 static RTC_HandleTypeDef RtcHandle;
@@ -151,14 +153,14 @@ configure_system_clock(void) {
 
     // Enable LSE Oscillator
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSE;
-    RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE; /* Mandatory, otherwise the PLL is reconfigured! */
-    RCC_OscInitStruct.LSEState       = RCC_LSE_ON; /* External 32.768 kHz clock on OSC_IN/OSC_OUT */
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE; /* Mandatory, otherwise the PLL is reconfigured! */
+    RCC_OscInitStruct.LSEState = RCC_LSE_ON; /* External 32.768 kHz clock on OSC_IN/OSC_OUT */
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) == HAL_OK) {
         // Connect LSE to RTC
         __HAL_RCC_RTC_CLKPRESCALER(RCC_RTCCLKSOURCE_LSE);
         __HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE);
     }
-    
+
 
     // Enable RTC
     __HAL_RCC_RTC_ENABLE();
@@ -172,39 +174,57 @@ configure_system_clock(void) {
     RtcHandle.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
 
     RtcHandle.Instance = RTC;
-    
+
     if (HAL_RTC_Init(&RtcHandle) != HAL_OK) {
         trace_printf("RTC error: RTC initialization failed.\n");
     }
 
-        
+
     dateStruct.WeekDay = RTC_WEEKDAY_MONDAY;
     dateStruct.Month = RTC_MONTH_JANUARY;
     dateStruct.Date = 1;
     dateStruct.Year = 15;
-    
-    
-    timeStruct.Hours          = 0;
-    timeStruct.Minutes        = 0;
-    timeStruct.Seconds        = 0;
-    timeStruct.TimeFormat     = RTC_HOURFORMAT12_PM;
+
+
+    timeStruct.Hours = 0;
+    timeStruct.Minutes = 0;
+    timeStruct.Seconds = 0;
+    timeStruct.TimeFormat = RTC_HOURFORMAT12_PM;
     timeStruct.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
     timeStruct.StoreOperation = RTC_STOREOPERATION_RESET;
-    
+
     HAL_RTC_SetDate(&RtcHandle, &dateStruct, FORMAT_BIN);
     HAL_RTC_SetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
-    
+
     HAL_RTC_GetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
     HAL_RTC_GetDate(&RtcHandle, &dateStruct, FORMAT_BIN);
-   
-    trace_printf("date  %.2u-%.2u-%d \n" , dateStruct.Date, dateStruct.Month,dateStruct.Year);
-    trace_printf("time  %.2u:%.2u:%.2u \n" , timeStruct.Hours,timeStruct.Minutes, timeStruct.Seconds);
-    
-    
-    HAL_Delay(10000);
+
+    trace_printf("date  %.2u-%.2u-%d \n", dateStruct.Date, dateStruct.Month, dateStruct.Year);
+    trace_printf("time  %.2u:%.2u:%.2u \n", timeStruct.Hours, timeStruct.Minutes, timeStruct.Seconds);
+
+
+    HAL_Delay(5000);
     HAL_RTC_GetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
-    trace_printf("time  %.2u:%.2u:%.2u \n" , timeStruct.Hours,timeStruct.Minutes, timeStruct.Seconds);
+    trace_printf("time  %.2u:%.2u:%.2u \n", timeStruct.Hours, timeStruct.Minutes, timeStruct.Seconds);
     
+    struct tm timeinfo;
+
+    // Setup a tm structure based on the RTC
+    timeinfo.tm_wday = dateStruct.WeekDay;
+    timeinfo.tm_mon = dateStruct.Month - 1;
+    timeinfo.tm_mday = dateStruct.Date;
+    timeinfo.tm_year = dateStruct.Year + 100;
+    timeinfo.tm_hour = timeStruct.Hours;
+    timeinfo.tm_min = timeStruct.Minutes;
+    timeinfo.tm_sec = timeStruct.Seconds;
+
+    time_t rawtime = mktime(&timeinfo);
+
+    trace_printf("Current date and time are: %s", ctime(&rawtime));
+     HAL_Delay(2000);
+    rawtime = mktime(&timeinfo);
+    trace_printf("Current date and time are: %s", ctime(&rawtime));
+
 }
 
 

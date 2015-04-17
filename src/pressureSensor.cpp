@@ -11,10 +11,12 @@
 #include <cortexm/ExceptionHandlers.h>
 #include "diag/Trace.h"
 
-#include "depth.h"
+#include "pressureSensor.h"
 #include "main.h"
 #include "pins.h"
 #include "types.h"
+
+#include "configComputer.h"
 
 static const u8 CMD_RESET = 0x1e;
 static const u8 CMD_READ_PROM = 0xa0;
@@ -28,8 +30,9 @@ static const i32 PRESSURE_MAX = 600000; // mbar * 100
 static const i32 TEMPERATURE_MIN = -4000; // C * 100
 static const i32 TEMPERATURE_MAX = 8500; // C * 100
 
+float atm_pressure=0.0;
 
-PressureSensor depth;
+PressureSensor pressureSensor;
 
 // From Meas-Spec AN520 note.
 static 	u8 CRC_TEST_VECTOR[] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x40,0x41, 0x42, 0x43, 0x44,0x45, 0x0b};
@@ -206,13 +209,13 @@ void PressureSensor::enable(void)
 extern "C"
 void DMA1_Stream3_IRQHandler(void)
 {
-	HAL_DMA_IRQHandler(depth.spi.hdmarx);
+	HAL_DMA_IRQHandler(pressureSensor.spi.hdmarx);
 }
 
 extern "C"
 void DMA1_Stream4_IRQHandler(void)
 {
-	HAL_DMA_IRQHandler(depth.spi.hdmatx);
+	HAL_DMA_IRQHandler(pressureSensor.spi.hdmatx);
 }
 
 void PressureSensor::callback_dma_complete(void)
@@ -246,7 +249,7 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *spi)
 	if(spi->Instance != SPI2)
 		assert(0);
 
-	depth.callback_dma_complete();
+	pressureSensor.callback_dma_complete();
 }
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *spi)
@@ -254,7 +257,7 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *spi)
 	if(spi->Instance != SPI2)
 		assert(0);
 
-	depth.callback_dma_complete();
+	pressureSensor.callback_dma_complete();
 }
 
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *spi)
@@ -262,7 +265,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *spi)
 	if(spi->Instance != SPI2)
 		assert(0);
 
-	depth.callback_dma_complete();
+	pressureSensor.callback_dma_complete();
 }
 
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *spi)
@@ -270,7 +273,7 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *spi)
 	if(spi->Instance != SPI2)
 		assert(0);
 
-	depth.callback_dma_error();
+	pressureSensor.callback_dma_error();
 }
 
 void PressureSensor::disable(void)
@@ -445,6 +448,10 @@ void PressureSensor::convert_values(u32 pressure_in, u32 temperature_in, i32 &pr
 
 	assert(temperature_out >= TEMPERATURE_MIN && temperature_out <= TEMPERATURE_MAX);
 	assert(pressure_out >= PRESSURE_MIN && pressure_out <= PRESSURE_MAX);
+}
+
+float PressureSensor::get_depth(){
+    return ((this->get_pressure_bar() - atm_pressure) / configComputer.get_hydrostatic_pressure()) * 10;
 }
 
 float PressureSensor::get_pressure_bar()

@@ -1,5 +1,12 @@
 #include "configComputer.h"
 
-void ConfigComputer::set_values(char default_lang, int units){
+ConfigComputer configComputer;
 
+float ConfigComputer::get_hydrostatic_pressure(){
+    if(defaultWaterType==waterType::FreshWater){
+        return 0.98;
+    }
+    //salt water
+    return 1.007;
 }
+
