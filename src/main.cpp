@@ -8,15 +8,16 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <diag/Trace.h>
-#include <cortexm/ExceptionHandlers.h>
-
+#include <time.h>
 #include <array>
 
+#include <diag/Trace.h>
+#include <cortexm/ExceptionHandlers.h>
 #include <stm32f4xx_hal.h>
 #include "stm32f4xx_hal_gpio.h"
 
 #include "pressureSensor.h"
+#include "rtc.h"
 #include "sdcard.h"
 #include "screen.h"
 #include "timer.h"
@@ -25,58 +26,36 @@
 #include "waterSensor.h"
 
 
-//static void rtc_init(void) {
-//	HAL_PWR_EnableBkUpAccess();
-//
-//	__HAL_RCC_LSE_CONFIG(RCC_LSE_ON); unsigned
-//	int loop = 0;
-//
-//	for (; __HAL_RCC_GET_FLAG(RCC_FLAG_LSERDY) == 0; loop++)
-//		__WFI();
-//
-//	trace_printf("LSE ready after %d loops.\n", loop);
-//
-//	__HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE); __HAL_RCC_RTC_ENABLE();
-//}
-
-void enable_gpio() {
+static inline void enable_peripherals() {
     __GPIOA_CLK_ENABLE();
     __GPIOB_CLK_ENABLE();
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
-}
-
-void enable_dma() {
     __DMA1_CLK_ENABLE();
     __DMA1_CLK_SLEEP_ENABLE();
 }
 
 int main(void) {
-    char buf1[16], buf2[16];
+    char buf1[16], buf2[32];
 #ifdef DEBUG
     HAL_EnableDBGSleepMode();
 #endif
-
-    enable_gpio();
-
-    enable_dma();
+    enable_peripherals();
+    rtc.init();
 
     SysTick_Config(SystemCoreClock / 8 / 1000);
     __HAL_CORTEX_SYSTICKCLK_CONFIG(SYSTICK_CLKSOURCE_HCLK_DIV8);
     NVIC_SetPriority(SysTick_IRQn, 0);
 
-
     DepthSampling sampling = DepthSampling::OSR_4096;
 
     trace_printf("System clock: %uHz\n", SystemCoreClock);
-    //rtc_init();
-    trace_printf("RTC ready to go.\n");
     screen.enable();
     pressureSensor.enable();
     assert(pressureSensor.wait());
     trace_printf("Depth sensor ready to go.\n");
-    float temperature, pressure;
+    float pressure;
     WaterSensor waterSensor = WaterSensor();
 
     for (;;) {
@@ -87,7 +66,6 @@ int main(void) {
             HAL_Delay(100);
             pressureSensor.wait();
             pressure = pressureSensor.get_pressure_bar();
-            temperature = pressureSensor.get_temperature_celcius();
 
             HAL_Delay(1000);
         }
@@ -96,12 +74,10 @@ int main(void) {
         HAL_Delay(100);
         pressureSensor.wait();
         pressure = pressureSensor.get_pressure_bar();
-        temperature = pressureSensor.get_temperature_celcius();
 
-        snprintf(buf1, sizeof (buf1), "%.2f mbar\n", pressure * 1000.);
-        fres = f_write(&f, buf1, strlen(buf1), NULL);
-        snprintf(buf2, sizeof (buf2), "%05.2f C\n", temperature);
-        fres = f_write(&f, buf2, strlen(buf2), NULL);
+        snprintf(buf1, sizeof (buf1), "%.2f mbar", pressure * 1000.);
+        time_t tm = rtc.now();
+        ctime_r(&tm, buf2);
 
         u8g_FirstPage(&screen.u8g);
         do {
@@ -117,9 +93,8 @@ int main(void) {
             u8g_DrawStr(&screen.u8g, 10, 27, buf1);
 
             u8g_SetColorIndex(&screen.u8g, 2);
-            u8g_SetFont(&screen.u8g, u8g_font_ncenR12);
-            u8g_DrawStr(&screen.u8g, 28, 46, buf2);
+            u8g_SetFont(&screen.u8g, u8g_font_helvR08);
+            u8g_DrawStr(&screen.u8g, 4, 46, buf2);
         } while (u8g_NextPage(&screen.u8g));
     }
-
 }
