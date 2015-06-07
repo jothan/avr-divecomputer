@@ -77,41 +77,9 @@ int main(void) {
     assert(pressureSensor.wait());
     trace_printf("Depth sensor ready to go.\n");
     float temperature, pressure;
-    FRESULT fres;
-    //
-    //    fres = f_mount(&sdcard_ff, "0", 1);
-    //    trace_printf("fres mount: %d\n", fres);
-    //    {
-    //        DIR d;
-    //        FILINFO fi;
-    //
-    //        char lfn[_MAX_LFN + 1];
-    //        fi.lfname = lfn;
-    //        fi.lfsize = sizeof (lfn);
-    //
-    //        fres = f_opendir(&d, "/");
-    //        trace_printf("fres opendir: %d\n", fres);
-    //
-    //        for (;;) {
-    //            fres = f_readdir(&d, &fi);
-    //            if (fres != FR_OK || fi.fname[0] == 0)
-    //                break;
-    //
-    //            trace_printf("file: %s\n", *fi.lfname ? fi.lfname : fi.fname);
-    //        }
-    //        f_closedir(&d);
-    //    }
-    FIL f;
-    //    fres = f_open(&f, "/log.txt", FA_WRITE | FA_OPEN_ALWAYS);
-    //    trace_printf("fres open: %d\n", fres);
-    //    fres = f_lseek(&f, f_size(&f));
-    //    trace_printf("fres seek: %d\n", fres);
-
     WaterSensor waterSensor = WaterSensor();
 
     for (;;) {
-
-
         if (waterSensor.is_wet()) {
             trace_printf("diving start\n");
 
@@ -122,13 +90,7 @@ int main(void) {
             temperature = pressureSensor.get_temperature_celcius();
 
             HAL_Delay(1000);
-        } else {
-            HAL_Delay(10000);
         }
-
-
-        //10 seconds
-        HAL_Delay(10000);
 
         pressureSensor.sample(sampling);
         HAL_Delay(100);
@@ -141,7 +103,6 @@ int main(void) {
         snprintf(buf2, sizeof (buf2), "%05.2f C\n", temperature);
         fres = f_write(&f, buf2, strlen(buf2), NULL);
 
-        fres = f_sync(&f);
         u8g_FirstPage(&screen.u8g);
         do {
             u8g_SetColorIndex(&screen.u8g, 1);
