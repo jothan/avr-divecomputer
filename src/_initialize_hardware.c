@@ -8,16 +8,6 @@
 #include "stm32f4xx.h"
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_cortex.h"
-#include "stm32f4xx_hal_rtc.h"
-
-#include <time.h> 
-
-#include <diag/Trace.h>
-
-static RTC_HandleTypeDef RtcHandle;
-
-static RTC_DateTypeDef dateStruct;
-static RTC_TimeTypeDef timeStruct;
 
 // ----------------------------------------------------------------------------
 
@@ -60,26 +50,27 @@ configure_system_clock(void);
 // priority is Privileged, and the Stack is set to Main.
 
 void
-__initialize_hardware(void) {
-    // Call the CSMSIS system initialisation routine.
-    SystemInit();
+__initialize_hardware(void)
+{
+  // Call the CSMSIS system initialisation routine.
+  SystemInit();
 
 #if defined (__VFP_FP__) && !defined (__SOFTFP__)
 
-    // Enable the Cortex-M4 FPU only when -mfloat-abi=hard.
-    // Code taken from Section 7.1, Cortex-M4 TRM (DDI0439C)
+  // Enable the Cortex-M4 FPU only when -mfloat-abi=hard.
+  // Code taken from Section 7.1, Cortex-M4 TRM (DDI0439C)
 
-    // Set bits 20-23 to enable CP10 and CP11 coprocessor
-    SCB->CPACR |= (0xF << 20);
+  // Set bits 20-23 to enable CP10 and CP11 coprocessor
+  SCB->CPACR |= (0xF << 20);
 
 #endif // (__VFP_FP__) && !(__SOFTFP__)
 
-    // Initialise the HAL Library; it must be the first
-    // instruction to be executed in the main program.
-    HAL_Init();
+  // Initialise the HAL Library; it must be the first
+  // instruction to be executed in the main program.
+  HAL_Init();
 
-    // Enable HSE Oscillator and activate PLL with HSE as source
-    configure_system_clock();
+  // Enable HSE Oscillator and activate PLL with HSE as source
+  configure_system_clock();
 }
 
 // ----------------------------------------------------------------------------
@@ -105,129 +96,43 @@ __initialize_hardware(void) {
  * @retval None
  */
 void
-configure_system_clock(void) {
-    RCC_ClkInitTypeDef RCC_ClkInitStruct;
-    RCC_OscInitTypeDef RCC_OscInitStruct;
+configure_system_clock(void)
+{
+  RCC_ClkInitTypeDef RCC_ClkInitStruct;
+  RCC_OscInitTypeDef RCC_OscInitStruct;
 
-    // Enable Power Control clock
-    __PWR_CLK_ENABLE();
+  // Enable Power Control clock
+  __PWR_CLK_ENABLE();
 
-    // Enable access to Backup domain
-    HAL_PWR_EnableBkUpAccess();
+  // The voltage scaling allows optimizing the power consumption when the
+  // device is clocked below the maximum system frequency, to update the
+  // voltage scaling value regarding system frequency refer to product
+  // datasheet.
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-    // Reset Backup domain
-    __HAL_RCC_BACKUPRESET_FORCE();
-    __HAL_RCC_BACKUPRESET_RELEASE();
+  // Enable HSE Oscillator and activate PLL with HSE as source
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
 
+  // This assumes the HSE_VALUE is a multiple of 1MHz. If this is not
+  // your case, you have to recompute these PLL constants.
+  RCC_OscInitStruct.PLL.PLLM = (HSE_VALUE/1000000u);
+  RCC_OscInitStruct.PLL.PLLN = 336;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
+  HAL_RCC_OscConfig(&RCC_OscInitStruct);
 
-    // The voltage scaling allows optimizing the power consumption when the
-    // device is clocked below the maximum system frequency, to update the
-    // voltage scaling value regarding system frequency refer to product
-    // datasheet.
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-
-
-    // Enable HSE Oscillator and activate PLL with HSE as source
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-    RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-
-    // This assumes the HSE_VALUE is a multiple of 1MHz. If this is not
-    // your case, you have to recompute these PLL constants.
-    RCC_OscInitStruct.PLL.PLLM = (HSE_VALUE / 1000000u);
-    RCC_OscInitStruct.PLL.PLLN = 336;
-    RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-    RCC_OscInitStruct.PLL.PLLQ = 7;
-    HAL_RCC_OscConfig(&RCC_OscInitStruct);
-
-    // Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2
-    // clocks dividers
-    RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK
-            | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
-    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
-    HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5);
-
-    // Enable LSE Oscillator
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSE;
-    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE; /* Mandatory, otherwise the PLL is reconfigured! */
-    RCC_OscInitStruct.LSEState = RCC_LSE_ON; /* External 32.768 kHz clock on OSC_IN/OSC_OUT */
-    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) == HAL_OK) {
-        // Connect LSE to RTC
-        __HAL_RCC_RTC_CLKPRESCALER(RCC_RTCCLKSOURCE_LSE);
-        __HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE);
-    }
-
-
-    // Enable RTC
-    __HAL_RCC_RTC_ENABLE();
-
-    RtcHandle.Init.HourFormat = RTC_HOURFORMAT_24;
-    RtcHandle.Init.AsynchPrediv = 127;
-    trace_printf("LSE_VALUE %d.\n", LSE_VALUE);
-    RtcHandle.Init.SynchPrediv = (LSE_VALUE / 128) - 1;
-    RtcHandle.Init.OutPut = RTC_OUTPUT_DISABLE;
-    RtcHandle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-    RtcHandle.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
-
-    RtcHandle.Instance = RTC;
-
-    if (HAL_RTC_Init(&RtcHandle) != HAL_OK) {
-        trace_printf("RTC error: RTC initialization failed.\n");
-    }
-
-
-    dateStruct.WeekDay = RTC_WEEKDAY_MONDAY;
-    dateStruct.Month = RTC_MONTH_JANUARY;
-    dateStruct.Date = 1;
-    dateStruct.Year = 15;
-
-
-    timeStruct.Hours = 0;
-    timeStruct.Minutes = 0;
-    timeStruct.Seconds = 0;
-    timeStruct.TimeFormat = RTC_HOURFORMAT12_PM;
-    timeStruct.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-    timeStruct.StoreOperation = RTC_STOREOPERATION_RESET;
-
-    HAL_RTC_SetDate(&RtcHandle, &dateStruct, FORMAT_BIN);
-    HAL_RTC_SetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
-
-    HAL_RTC_GetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
-    HAL_RTC_GetDate(&RtcHandle, &dateStruct, FORMAT_BIN);
-
-    trace_printf("date  %.2u-%.2u-%d \n", dateStruct.Date, dateStruct.Month, dateStruct.Year);
-    trace_printf("time  %.2u:%.2u:%.2u \n", timeStruct.Hours, timeStruct.Minutes, timeStruct.Seconds);
-
-
-    HAL_Delay(5000);
-    HAL_RTC_GetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
-    trace_printf("time  %.2u:%.2u:%.2u \n", timeStruct.Hours, timeStruct.Minutes, timeStruct.Seconds);
-    
-    struct tm timeinfo;
-
-    // Setup a tm structure based on the RTC
-    timeinfo.tm_wday = dateStruct.WeekDay;
-    timeinfo.tm_mon = dateStruct.Month - 1;
-    timeinfo.tm_mday = dateStruct.Date;
-    timeinfo.tm_year = dateStruct.Year + 100;
-    timeinfo.tm_hour = timeStruct.Hours;
-    timeinfo.tm_min = timeStruct.Minutes;
-    timeinfo.tm_sec = timeStruct.Seconds;
-
-    time_t rawtime = mktime(&timeinfo);
-
-    trace_printf("Current date and time are: %s", ctime(&rawtime));
-     HAL_Delay(2000);
-    rawtime = mktime(&timeinfo);
-    trace_printf("Current date and time are: %s", ctime(&rawtime));
-
+  // Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2
+  // clocks dividers
+  RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK
+      | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5);
 }
-
-
-
 
 // ----------------------------------------------------------------------------

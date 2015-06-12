@@ -15,4 +15,6 @@ public:
     bool is_wet();
 };
 
-#endif	/* WATERSENSOR_H */
+extern WaterSensor waterSensor;
+
+#endif
