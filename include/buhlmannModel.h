@@ -58,10 +58,12 @@ public:
     void ascentCeiling();
     float NDL_calculation();
     float Oxygen_toxicity_calculations();
+    float maximumOperationDepth();
 private:
     float oldPressure;
     float currentPressure;
     const float ln2 = log(2);
+    float getRQ();
 };
 
 extern BuhlmannModel buhlmannModel;

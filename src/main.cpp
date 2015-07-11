@@ -26,8 +26,9 @@
 #include "systemClock.h"
 #include "waterSensor.h"
 #include "fileUtility.h"
+#include <diag/Trace.h>
 
-void enable_gpio() {
+static inline void enable_peripherals() {
     __GPIOA_CLK_ENABLE();
     __GPIOB_CLK_ENABLE();
     __GPIOC_CLK_ENABLE();
@@ -88,6 +89,10 @@ int main(void) {
         float current_pressure = pressureSensor.get_pressure_bar();
 
         snprintf(buf1, sizeof (buf1), "%.2f mbar\n", pressure * 1000.);
+
+       snprintf(buf1, sizeof (buf1), "%.2f mbar", pressure * 1000.);
+        time_t tm = rtc.now();
+        ctime_r(&tm, buf2);
 
         u8g_FirstPage(&screen.u8g);
         do {

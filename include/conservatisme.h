@@ -1,0 +1,1 @@
+enum class conservatismeLevel { Low, Normal, High};

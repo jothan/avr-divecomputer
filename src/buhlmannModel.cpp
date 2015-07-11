@@ -11,7 +11,9 @@
 #include "pressureSensor.h"
 #include "ff.h"
 #include "systemClock.h"
-
+#include "configComputer.h"
+#include "gazSetting.h"
+        
 #include <array>
 #include <math.h>
 /**
@@ -50,7 +52,7 @@ BuhlmannModel::BuhlmannModel() {
         pressureSensor.capture_data();
         for (int i = 0; i < MAX_TISSUE; i++) {
             CompartmentTissue compartmentTissue = CompartmentTissue();
-            compartmentTissue.ppN2 = GlobalConstants::NITROGEN_AIR * (pressureSensor.get_pressure_bar() - GlobalConstants::pressure_water);
+            compartmentTissue.ppN2 = GlobalConstants::NITROGEN_AIR * (pressureSensor.get_pressure_bar() - GlobalConstants::water_vapor_pressure);
             tissue[i] = compartmentTissue;
         }
 
@@ -62,22 +64,32 @@ BuhlmannModel::~BuhlmannModel() {
     // TODO Auto-generated destructor stub
 }
 
+float BuhlmannModel::getRQ(){
+    conservatismeLevel conservatisme = configComputer.get_conservatisme_level();
+    if(conservatisme == conservatismeLevel::Normal){
+        return 0.9;
+    }else if(conservatisme == conservatismeLevel::Low){
+        return 1;
+    }else{
+        return 0.8;
+    }
+}
+
 void BuhlmannModel::AscendDescend() {
     float k=0;
-    //float t=
     float rate = pressureSensor.get_rate();
     float r = rate * GlobalConstants::NITROGEN_AIR;
     float current_pressure = pressureSensor.get_pressure_bar();
     float t = (current_pressure - pressureSensor.get_atm_pressure()) / rate;
-    float palv = GlobalConstants::NITROGEN_AIR * (current_pressure - GlobalConstants::pressure_water);
+    //P alvéolaire = (pamb - ph2o + ((1-rq) / rq) * pco2) * q
+    float palv = (current_pressure - GlobalConstants::water_vapor_pressure + ((1-getRQ())/getRQ()) * GlobalConstants::carbon_dioxide_pressure)*GlobalConstants::NITROGEN_AIR;
+    //float palv = GlobalConstants::NITROGEN_AIR * (current_pressure - GlobalConstants::water_vapor_pressure);
     for (int i = 0; i < MAX_TISSUE; i++) {
         CompartmentTissue compartmentTissue = tissue[i];
         k=ln2/buehlmann_N2_t_halflife[i];
-        
         compartmentTissue.ppN2 =  palv + r * (t - 1/k) - (palv - compartmentTissue.ppN2 - r / k ) * exp(-k*t);
         compartmentTissue.ppHe =  palv + r * (t - 1/k) - (palv - compartmentTissue.ppHe - r / k ) * exp(-k*t);
         tissue[i] = compartmentTissue;
-        
     }
 } 
 
@@ -110,19 +122,19 @@ float BuhlmannModel::NDL_calculation() {
     //t = (-1/k)*ln[(Pi - Mo)/(Pi - Po)]
     
     //ln x = loge x = y
-    float min = -1;
+    float min = -1.0;
     int k = 0;
     int t;
     for (int i = 0; i < MAX_TISSUE; i++) {
-        double pi = (pressureSensor.get_pressure_bar() - GlobalConstants::pressure_water)* 2; //replace 2 by gaz value
+        double pi = (pressureSensor.get_pressure_bar() - GlobalConstants::water_vapor_pressure)* 2; //replace 2 by gaz value
         double mo = buehlmann_N2_a[i];
-        double po = (pressureSensor.get_atm_pressure() - GlobalConstants::pressure_water) * GlobalConstants::NITROGEN_AIR;
-        //do it only when Pi > Mo > Po
-        if (pi > mo && mo > po) {
+        double po = (pressureSensor.get_atm_pressure() - GlobalConstants::water_vapor_pressure) * GlobalConstants::NITROGEN_AIR;
+        //do it only when Pi > Mo > Po (on-gassing) or Pi < Mo < Po (off-gassing)
+        if ((pi > mo && mo > po) || (pi<mo && mo < po)) {
             k = ln2 / buehlmann_N2_t_halflife[i];
             t = (-1/k)*log((pi - mo)/(pi - po));
 
-            if (t < min || min == -1) {
+            if (t < min || min == -1.0) {
                 min = t;
             }
         }
@@ -130,4 +142,7 @@ float BuhlmannModel::NDL_calculation() {
     return min;
 }
 
-
+//return in bar
+float BuhlmannModel::maximumOperationDepth(){
+    return  configComputer.getPo2Allowed() / gazSetting.getO2Percentage();
+}

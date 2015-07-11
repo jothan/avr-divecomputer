@@ -1,12 +1,5 @@
 #include "gazSetting.h"
 
-GazSetting::GazSetting() {
-    o2Percentage = 20.95;
-}
-
-GazSetting::~GazSetting() {
-}
-
 float GazSetting::getO2Percentage() {
     return o2Percentage;
 }
