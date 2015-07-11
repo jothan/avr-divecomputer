@@ -11,12 +11,11 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <diag/Trace.h>
-#include <cortexm/ExceptionHandlers.h>
-
+#include <time.h>
 #include <array>
 
 #include "pressureSensor.h"
+#include "rtc.h"
 #include "sdcard.h"
 #include "screen.h"
 #include <time.h> 
@@ -34,33 +33,25 @@ void enable_gpio() {
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
-}
-
-void enable_dma() {
     __DMA1_CLK_ENABLE();
     __DMA1_CLK_SLEEP_ENABLE();
 }
 
 int main(void) {
-    char buf1[16], buf2[16];
+    char buf1[16], buf2[32];
 #ifdef DEBUG
     HAL_EnableDBGSleepMode();
 #endif
-
-    enable_gpio();
-
-    enable_dma();
+    enable_peripherals();
+    rtc.init();
 
     SysTick_Config(SystemCoreClock / 8 / 1000);
     __HAL_CORTEX_SYSTICKCLK_CONFIG(SYSTICK_CLKSOURCE_HCLK_DIV8);
     NVIC_SetPriority(SysTick_IRQn, 0);
 
-
     DepthSampling sampling = DepthSampling::OSR_4096;
 
     trace_printf("System clock: %uHz\n", SystemCoreClock);
-    //rtc_init();
-    trace_printf("RTC ready to go.\n");
     screen.enable();
     pressureSensor.enable();
 
@@ -112,8 +103,8 @@ int main(void) {
             u8g_DrawStr(&screen.u8g, 10, 27, buf1);
 
             u8g_SetColorIndex(&screen.u8g, 2);
-            u8g_SetFont(&screen.u8g, u8g_font_ncenR12);
-            u8g_DrawStr(&screen.u8g, 28, 46, buf2);
+            u8g_SetFont(&screen.u8g, u8g_font_helvR08);
+            u8g_DrawStr(&screen.u8g, 4, 46, buf2);
         } while (u8g_NextPage(&screen.u8g));
 
 
@@ -137,5 +128,4 @@ int main(void) {
         //if desaturation is finish we can return in sleep mode
         __WFI();
     }
-
 }
