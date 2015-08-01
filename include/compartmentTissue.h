@@ -10,7 +10,7 @@
 
 class CompartmentTissue {
 public:
-	float kHe, kN2;         // Time constants - calculated from halftimes
+	float kHe, kN2;           // Time constants - calculated from halftimes
 	float aHe, bHe, aN2, bN2; // A and b co-efficients
 	float ppHe, ppN2;
 	CompartmentTissue();

@@ -4,11 +4,14 @@
  * 
  * Created on 15 avril 2015, 21:15
  */
+#include <stm32f4xx_hal.h>
+#include "stm32f4xx_hal_gpio.h"
 
 #include "waterSensor.h"
 
-#include <stm32f4xx_hal.h>
-#include "stm32f4xx_hal_gpio.h"
+
+
+WaterSensor waterSensor;
 
 
 WaterSensor::WaterSensor() 
