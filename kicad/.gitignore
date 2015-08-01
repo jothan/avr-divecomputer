@@ -1,4 +1,5 @@
 *-cache.lib
+*-rescue.lib
 *.bak
 *.ps
 *.pdf
