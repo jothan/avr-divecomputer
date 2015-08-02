@@ -1,6 +1,7 @@
 *-cache.lib
 *-rescue.lib
 *.bak
+*.bck
 *.ps
 *.pdf
 *.pho
